@@ -1,0 +1,28 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_buscar"
+        android:icon="@android:drawable/ic_menu_search"
+        android:title="Buscar noticia"
+        app:actionViewClass="android.support.v7.widget.SearchView"
+        app:showAsAction="collapseActionView|ifRoom" />
+
+    <item
+        android:id="@+id/action_abrir_navegador"
+        android:icon="@android:drawable/ic_menu_compass"
+        android:title="Abrir en navegador"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/menu_actualizar"
+        android:icon="@android:drawable/ic_popup_sync"
+        android:title="@string/actualizar"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_test_conectividad"
+        android:title="Diagnóstico de Red Avanzado"
+        app:showAsAction="never" />
+
+</menu>
