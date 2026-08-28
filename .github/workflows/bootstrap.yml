@@ -22,42 +22,75 @@ jobs:
           ref: 34d67599d2c8d518f034bb97e3a09a6e2d7d6a8e
           path: template
 
-      - name: Discover and verify RSS feed
+      - name: Discover and verify Público news feed
         shell: bash
         run: |
           python3 - <<'PY' > feed.env
           import urllib.request, urllib.parse
           from html.parser import HTMLParser
           home='https://www.publico.es/'
-          candidates=['https://www.publico.es/rss/','http://www.publico.es/rss/']
-          headers={'User-Agent':'Mozilla/5.0 NoticiasAndroid/1.0','Accept':'application/rss+xml,application/xml,text/xml,text/html,*/*'}
+          direct=[
+            'https://www.publico.es/rss',
+            'https://www.publico.es/rss/',
+            'https://www.publico.es/rss.xml',
+            'https://www.publico.es/feed/',
+            'https://www.publico.es/feed.xml',
+            'https://www.publico.es/rss/portada.xml',
+            'https://www.publico.es/rss/ultimas-noticias.xml',
+            'https://www.publico.es/rss?seccion=portada'
+          ]
+          headers={'User-Agent':'Mozilla/5.0 (Android) NoticiasPublico/1.0','Accept':'application/rss+xml,application/xml,text/xml,text/html,*/*'}
           def valid(url):
               try:
                   req=urllib.request.Request(url,headers=headers)
                   with urllib.request.urlopen(req,timeout=20) as r:
-                      data=r.read(16384).lower()
-                      if any(x in data for x in (b'<rss',b'<channel',b'<rdf:rdf',b'<feed')): return r.geturl()
-              except Exception as e: print(f'# {url}: {e}')
+                      data=r.read(32768).lower()
+                      if any(x in data for x in (b'<rss',b'<channel',b'<rdf:rdf',b'<feed')):
+                          return r.geturl()
+              except Exception as e:
+                  print(f'# direct {url}: {e}')
               return None
-          for url in candidates:
+          for url in direct:
               hit=valid(url)
-              if hit: print('FEED_URL='+hit); raise SystemExit(0)
+              if hit:
+                  print('FEED_URL='+hit)
+                  print('FEED_MODE=direct')
+                  raise SystemExit(0)
+
           class P(HTMLParser):
               def __init__(self): super().__init__(); self.feeds=[]
               def handle_starttag(self,tag,attrs):
                   if tag.lower()!='link': return
-                  d={str(k).lower():(v or '') for k,v in attrs}; typ=d.get('type','').lower(); rel=d.get('rel','').lower(); href=d.get('href','')
-                  if href and ('rss' in typ or 'atom' in typ or ('alternate' in rel and ('rss' in href.lower() or 'feed' in href.lower()))): self.feeds.append(urllib.parse.urljoin(home,href))
-          req=urllib.request.Request(home,headers=headers)
-          with urllib.request.urlopen(req,timeout=20) as r: html=r.read(800000).decode('utf-8','ignore')
-          p=P(); p.feed(html)
-          for url in p.feeds:
-              hit=valid(url)
-              if hit: print('FEED_URL='+hit); raise SystemExit(0)
-          raise SystemExit('No working RSS feed found')
+                  d={str(k).lower():(v or '') for k,v in attrs}
+                  typ=d.get('type','').lower(); rel=d.get('rel','').lower(); href=d.get('href','')
+                  if href and ('rss' in typ or 'atom' in typ or ('alternate' in rel and ('rss' in href.lower() or 'feed' in href.lower()))):
+                      self.feeds.append(urllib.parse.urljoin(home,href))
+          try:
+              req=urllib.request.Request(home,headers=headers)
+              with urllib.request.urlopen(req,timeout=20) as r: html=r.read(1000000).decode('utf-8','ignore')
+              p=P(); p.feed(html)
+              for url in p.feeds:
+                  hit=valid(url)
+                  if hit:
+                      print('FEED_URL='+hit)
+                      print('FEED_MODE=autodiscovered')
+                      raise SystemExit(0)
+          except Exception as e:
+              print(f'# autodiscovery: {e}')
+
+          # Público's old direct RSS is no longer exposed to a clean HTTP client.
+          # Use Google's standard RSS search restricted to Público as a resilient fallback.
+          fallback='https://news.google.com/rss/search?q=site%3Apublico.es&hl=es&gl=ES&ceid=ES%3Aes'
+          hit=valid(fallback)
+          if hit:
+              print('FEED_URL='+hit)
+              print('FEED_MODE=google-news-site-filter')
+              raise SystemExit(0)
+          raise SystemExit('No usable Público news feed found')
           PY
           cat feed.env
           grep '^FEED_URL=' feed.env >> "$GITHUB_ENV"
+          grep '^FEED_MODE=' feed.env >> "$GITHUB_ENV"
 
       - name: Generate app
         env:
@@ -72,6 +105,7 @@ jobs:
           curl --retry 3 --retry-all-errors -fsSL "https://gist.githubusercontent.com/rodrigosambadesaa/729cca29a031fef4e2f15751863b655f/raw/${GIST_REV}/ConnectivityAndInternetAccess.java" -o target/third_party/connectivity/ConnectivityAndInternetAccess.java
           cp target/third_party/connectivity/ConnectivityAndInternetAccess.java target/app/src/main/java/com/example/muyinteresante/util/ConnectivityAndInternetAccess.java
           sed -i 's/^package net\.i2p\.android\.router\.util;/package com.example.muyinteresante.util;/' target/app/src/main/java/com/example/muyinteresante/util/ConnectivityAndInternetAccess.java
+
           python3 - <<'PY'
           import os,re,pathlib
           r=pathlib.Path('target'); n=os.environ['APP_NAME']; aid=os.environ['APP_ID']; f=os.environ['FEED_URL']; repo=os.environ['REPO_NAME']
@@ -81,22 +115,25 @@ jobs:
           p=r/'app/src/main/java/com/example/muyinteresante/MainActivity.java'; s=p.read_text(); s=re.sub(r'private static final String RSS_URL = "[^"]+";',f'private static final String RSS_URL = "{f}";',s); s=re.sub(r'private static final String RSS_PAGE_URL = "[^"]+";',f'private static final String RSS_PAGE_URL = "{f}";',s); s=s.replace('private boolean hasMoreNews = true;','private boolean hasMoreNews = false;').replace('hasMoreNews = true;','hasMoreNews = false;'); p.write_text(s)
           p=r/'app/src/main/java/com/example/muyinteresanteNoTocar/DescargaNoticiasRSS.java'; p.write_text(p.read_text().replace('practica-noticias-web-muy-interesante/1.0',repo+'/1.0'))
           PY
+
           printf '# ConnectivityAndInternetAccess\nComplete unmodified source: https://gist.github.com/rodrigosambadesaa/729cca29a031fef4e2f15751863b655f\nPinned revision: %s\nCompiled copy changes only package declaration.\n' "$GIST_REV" > target/third_party/connectivity/README.md
-          printf '# %s\nIndependent Android RSS reader for %s.\n\nRSS: %s\n\nSearch, refresh, sharing, article view, offline cache, passive NetworkObserver and full connectivity diagnostics. Complete requested gist is vendored under third_party/connectivity.\n\nThis is not an official %s application.\n' "$APP_NAME" "$MEDIA_NAME" "$FEED_URL" "$MEDIA_NAME" > target/README.md
+          printf '# %s\nIndependent Android news reader for %s.\n\nFeed: %s\nFeed mode: %s\n\nThe build tries Público direct RSS and HTML RSS autodiscovery first. If Público does not expose a usable feed to a clean client, it falls back to Google News RSS restricted to site:publico.es.\n\nIncludes search, refresh, sharing, article view, offline cache, passive NetworkObserver and full connectivity diagnostics. The complete requested gist is vendored under third_party/connectivity.\n\nThis is not an official %s application.\n' "$APP_NAME" "$MEDIA_NAME" "$FEED_URL" "$FEED_MODE" "$MEDIA_NAME" > target/README.md
 
       - name: Compile Debug and Release APKs
         working-directory: target
         run: chmod +x gradlew && ./gradlew --no-daemon clean assembleDebug assembleRelease
+
       - name: Commit completed app
         working-directory: target
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A && git commit -m "Implement Noticias Público Android RSS app" && git push origin HEAD:main
+          git add -A && git commit -m "Implement Noticias Público Android news app" && git push origin HEAD:main
+
       - name: Publish v1.0.0 release
         working-directory: target
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           cp app/build/outputs/apk/release/app-release.apk noticias-publico-v1.0.0.apk
-          gh release create v1.0.0 noticias-publico-v1.0.0.apk --repo "$GITHUB_REPOSITORY" --target main --title "v1.0.0 - Noticias Público" --notes "Primera versión funcional con RSS verificado/autodetectado, caché offline, búsqueda, diagnóstico de red y gist completo ConnectivityAndInternetAccess."
+          gh release create v1.0.0 noticias-publico-v1.0.0.apk --repo "$GITHUB_REPOSITORY" --target main --title "v1.0.0 - Noticias Público" --notes "Primera versión funcional. Se intenta RSS directo de Público y, si el medio no lo expone a un cliente limpio, se usa Google News RSS restringido a publico.es. Incluye caché offline, búsqueda, diagnóstico de red y el gist completo ConnectivityAndInternetAccess."
