@@ -28,12 +28,16 @@ import com.example.muyinteresanteNoTocar.NoticiaRSS;
 import com.example.muyinteresanteNoTocar.iNoticiaRSS;
 
 import java.util.ArrayList;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.TimeZone;
 
 public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
 
     private static final String TAG = "MainActivity";
     private static final String RSS_URL = "https://news.google.com/rss/search?q=site%3Apublico.es&hl=es&gl=ES&ceid=ES%3Aes";
-    private static final String RSS_PAGE_URL = "https://news.google.com/rss/search?q=site%3Apublico.es&hl=es&gl=ES&ceid=ES%3Aes";
+    private static final String RSS_PAGE_URL = "https://news.google.com/rss/search?q=site%3Apublico.es";
     private static final int LOAD_MORE_THRESHOLD = 4;
     private static final int MAX_CONSECUTIVE_DUPLICATE_PAGES = 2;
 
@@ -59,6 +63,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
     private boolean hasMoreNews = false;
     private int nextArchivePage = 2;
     private int consecutiveDuplicatePages = 0;
+    private Date archiveBeforeDate;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -297,7 +302,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
      * un diálogo modal. Las páginas se acumulan en el adapter y se deduplican.
      */
     private void cargarMasNoticias() {
-        if (isLoadingMore || !hasMoreNews || adapter == null) {
+        if (isLoadingMore || !hasMoreNews || archiveBeforeDate == null || adapter == null) {
             return;
         }
 
@@ -308,7 +313,10 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
 
         isLoadingMore = true;
         final int pageToLoad = nextArchivePage;
-        Log.d(TAG, "Solicitando noticias antiguas. Página RSS: " + pageToLoad);
+        final Date requestedBeforeDate = archiveBeforeDate;
+        final String archiveUrl = buildArchiveUrl(requestedBeforeDate);
+        Log.d(TAG, "Solicitando noticias antiguas. Página RSS: " + pageToLoad
+                + " (before=" + formatArchiveDate(requestedBeforeDate) + ")");
 
         ConnectivityAndInternetAccess.checkInternetAsyncDefault(this, new ConnectivityAndInternetAccess.InternetCallback() {
             @Override
@@ -337,16 +345,28 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
                             return;
                         }
 
+                        Date fetchedOldestDate = findOldestNewsDate(listaNoticias);
                         int added = adapter.appendData(listaNoticias);
                         nextArchivePage = pageToLoad + 1;
 
                         if (added > 0) {
+                            if (fetchedOldestDate == null || !fetchedOldestDate.before(requestedBeforeDate)) {
+                                hasMoreNews = false;
+                                Log.d(TAG, "El feed no avanzó a noticias más antiguas; se detiene el scroll infinito.");
+                                return;
+                            }
+                            archiveBeforeDate = fetchedOldestDate;
                             consecutiveDuplicatePages = 0;
+                            hasMoreNews = true;
                             NewsCacheManager.saveNewsToCache(MainActivity.this, adapter.getAllData());
                             Log.d(TAG, "Página " + pageToLoad + " cargada: " + added + " noticias nuevas (" + listaNoticias.size() + " recibidas).");
                         } else {
                             consecutiveDuplicatePages++;
                             Log.d(TAG, "Página " + pageToLoad + " sin noticias nuevas tras deduplicar.");
+
+                            if (fetchedOldestDate != null && fetchedOldestDate.before(requestedBeforeDate)) {
+                                archiveBeforeDate = fetchedOldestDate;
+                            }
 
                             // Algunos feeds pueden repetir una página al cambiar su contenido.
                             // Saltamos como máximo un pequeño número de páginas para evitar un bucle infinito.
@@ -363,9 +383,33 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
                             }
                         }
                     }
-                }, false).execute(RSS_PAGE_URL + pageToLoad, NoticiaRSS.RSS_MUY_INTERESANTE);
+                }, false).execute(archiveUrl, NoticiaRSS.RSS_MUY_INTERESANTE);
             }
         });
+    }
+
+    private String buildArchiveUrl(Date beforeDate) {
+        return RSS_PAGE_URL + "%20before%3A" + formatArchiveDate(beforeDate)
+                + "&hl=es&gl=ES&ceid=ES%3Aes";
+    }
+
+    private String formatArchiveDate(Date date) {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd", Locale.US);
+        formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return formatter.format(date);
+    }
+
+    private Date findOldestNewsDate(ArrayList<NoticiaRSS> noticias) {
+        Date oldest = null;
+        if (noticias != null) {
+            for (NoticiaRSS noticia : noticias) {
+                if (noticia != null && noticia.getFechaNoticia() != null
+                        && (oldest == null || noticia.getFechaNoticia().before(oldest))) {
+                    oldest = noticia.getFechaNoticia();
+                }
+            }
+        }
+        return oldest;
     }
 
     private void usarNoticiasOffline() {
@@ -391,9 +435,11 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             layoutEmptyState.setVisibility(View.GONE);
             rvNoticias.setVisibility(View.VISIBLE);
 
-            // Una actualización completa reinicia el recorrido del archivo.
+            // Una actualización completa reinicia el recorrido del archivo desde
+            // la noticia más antigua que acaba de llegar.
             nextArchivePage = 2;
-            hasMoreNews = false;
+            archiveBeforeDate = findOldestNewsDate(listaNoticias);
+            hasMoreNews = archiveBeforeDate != null;
             isLoadingMore = false;
             consecutiveDuplicatePages = 0;
 
