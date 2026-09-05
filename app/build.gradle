@@ -10,13 +10,19 @@ android {
         applicationId "com.rodrigosambade.noticias.publico"
         minSdkVersion 16
         targetSdkVersion 35
-        versionCode 4
-        versionName "1.1.2"
+        versionCode 5
+        versionName "1.1.3"
     }
 
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    // La aplicación mantiene las Support Libraries por compatibilidad y el icono
+    // WebP existente se conserva para no cambiar el alcance de esta actualización.
+    lint {
+        disable += ['GradleCompatible', 'WebpUnsupported']
     }
 
     buildTypes {
@@ -34,4 +40,5 @@ dependencies {
     implementation 'com.android.support:cardview-v7:28.0.0'
     implementation 'com.android.support:design:28.0.0'
     implementation 'com.android.support:support-v4:28.0.0'
+    testImplementation 'junit:junit:4.13.2'
 }

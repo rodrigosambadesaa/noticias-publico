@@ -1,8 +1,9 @@
 package com.example.muyinteresanteNoTocar;
 
 import java.io.InputStream;
+import java.io.IOException;
 import java.net.URL;
-import java.net.URLConnection;
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -15,7 +16,7 @@ import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.util.Log;
 
-import com.example.muyinteresante.util.ConnectivityAndInternetAccess;
+import com.example.muyinteresante.util.RemoteOperationPolicy;
 
 /* Parsea un canal RSS y devuelve sus items en un ArrayList */
 
@@ -25,8 +26,32 @@ public class DescargaNoticiasRSS extends AsyncTask<String,Integer,ArrayList<Noti
 	private iNoticiaRSS objetoReceptor=null;
 	private ProgressDialog pd=null;
 	private boolean mostrarProgreso=true;
+	private DownloadError lastError;
 	
 	private static final String MENSAJE_PD="Descargando noticias...";
+
+	public static final class DownloadError {
+		private final RemoteOperationPolicy.FailureKind kind;
+		private final int httpStatus;
+		private final String message;
+
+		private DownloadError(RemoteOperationPolicy.FailureKind kind, int httpStatus, String message) {
+			this.kind = kind;
+			this.httpStatus = httpStatus;
+			this.message = message != null ? message : "";
+		}
+
+		public boolean isConnectivityFailure() {
+			return kind == RemoteOperationPolicy.FailureKind.CONNECTIVITY;
+		}
+
+		public boolean isServiceFailure() {
+			return kind == RemoteOperationPolicy.FailureKind.SERVICE;
+		}
+
+		public int getHttpStatus() { return httpStatus; }
+		public String getMessage() { return message; }
+	}
 	
 	
 	public DescargaNoticiasRSS(Context contexto, iNoticiaRSS objetoReceptor){
@@ -47,11 +72,6 @@ public class DescargaNoticiasRSS extends AsyncTask<String,Integer,ArrayList<Noti
 	@Override
 	protected void onPreExecute() {
 		super.onPreExecute();
-		
-		if (contexto != null) {
-			// Registramos inicio de intento de conexión para seguimiento de estado
-			ConnectivityAndInternetAccess.beginConnectionAttempt(contexto);
-		}
 		
 		if (mostrarProgreso && contexto != null) {
 			pd = new ProgressDialog(contexto);
@@ -74,9 +94,6 @@ public class DescargaNoticiasRSS extends AsyncTask<String,Integer,ArrayList<Noti
 	protected void onCancelled() {
 		super.onCancelled();
 		
-		// Finalizamos intento de conexión
-		ConnectivityAndInternetAccess.endConnectionAttempt();
-		
 		if (pd!=null) pd.dismiss();
 	}
 	
@@ -85,13 +102,9 @@ public class DescargaNoticiasRSS extends AsyncTask<String,Integer,ArrayList<Noti
 	protected ArrayList<NoticiaRSS> doInBackground(String... params) {
 		
 		InputStream entrada = null;
+		HttpURLConnection conex = null;
 		
 		try{
-			if (contexto != null && !ConnectivityAndInternetAccess.isConnectedOrConnecting(contexto)) {
-				Log.w("DescargaNoticiasRSS", "Descarga cancelada: Dispositivo sin conexión según ConnectivityAndInternetAccess.");
-				return null;
-			}
-
 			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			dbf.setIgnoringComments(true);
 			dbf.setCoalescing(true);
@@ -99,12 +112,21 @@ public class DescargaNoticiasRSS extends AsyncTask<String,Integer,ArrayList<Noti
 			
 			 // Creamos objeto URL a partir de la direccion web para conectarnos con el servidor
 			URL url = new URL(params[0]);
-			URLConnection conex = url.openConnection(); // Abrimos la conexion
+			conex = (HttpURLConnection) url.openConnection(); // La petición real es la prueba del feed.
 			conex.setConnectTimeout(10000);
 			conex.setReadTimeout(10000);
 			conex.setUseCaches(false); // Evitamos la cache de datos.
+			conex.setInstanceFollowRedirects(true);
 			conex.setRequestProperty("accept", "application/rss+xml, application/xml, text/xml, */*");
 			conex.setRequestProperty("User-Agent", "Mozilla/5.0 (Android) noticias-publico/1.0");
+			int responseCode = conex.getResponseCode();
+			if (responseCode < HttpURLConnection.HTTP_OK || responseCode >= HttpURLConnection.HTTP_MULT_CHOICE) {
+				lastError = new DownloadError(
+						RemoteOperationPolicy.classify(null, responseCode),
+						responseCode,
+						"El feed respondió con HTTP " + responseCode);
+				return null;
+			}
 			 
 			 // Abrimos el fichero para su lectura/descarga
 			entrada = conex.getInputStream();	
@@ -131,10 +153,15 @@ public class DescargaNoticiasRSS extends AsyncTask<String,Integer,ArrayList<Noti
 			return noticias;
 		}
 		catch (Exception e){
+			lastError = new DownloadError(
+					RemoteOperationPolicy.classify(e, conex != null ? safeResponseCode(conex) : -1),
+					conex != null ? safeResponseCode(conex) : -1,
+					e.getMessage());
 			e.printStackTrace();
 			return null;
 		}
 		finally {
+			if (conex != null) conex.disconnect();
 			if (entrada != null) {
 				try {
 					entrada.close();
@@ -149,11 +176,13 @@ public class DescargaNoticiasRSS extends AsyncTask<String,Integer,ArrayList<Noti
 	protected void onPostExecute(ArrayList<NoticiaRSS> result) {
 		super.onPostExecute(result);
 		
-		// Finalizamos intento de conexión
-		ConnectivityAndInternetAccess.endConnectionAttempt();
-		
 		if (pd!=null) pd.dismiss();
-		if (objetoReceptor!=null ) objetoReceptor.onRecibeNoticiasRSS(result);
+		if (objetoReceptor != null) {
+			if (result == null && lastError != null) {
+				objetoReceptor.onError(lastError);
+			}
+			objetoReceptor.onRecibeNoticiasRSS(result);
+		}
 	}
 
 
@@ -162,6 +191,14 @@ public class DescargaNoticiasRSS extends AsyncTask<String,Integer,ArrayList<Noti
 		super.onProgressUpdate(values);
 		if (pd != null && values != null && values.length > 0) {
 			pd.setMessage(MENSAJE_PD + " " + values[0]);
+		}
+	}
+
+	private int safeResponseCode(HttpURLConnection connection) {
+		try {
+			return connection.getResponseCode();
+		} catch (IOException ignored) {
+			return -1;
 		}
 	}
 }

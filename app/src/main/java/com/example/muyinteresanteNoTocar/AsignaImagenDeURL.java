@@ -41,9 +41,6 @@ public class AsignaImagenDeURL extends AsyncTask<String,Void,Void> {
 		super.onPreExecute();
 		mapaDeBits = null;
 		f = null;
-		if (contexto != null) {
-			ConnectivityAndInternetAccess.beginConnectionAttempt(contexto);
-		}
 	}
 
 	@Override
@@ -62,7 +59,7 @@ public class AsignaImagenDeURL extends AsyncTask<String,Void,Void> {
 					if (mapaDeBits != null) return null;
 				}
 
-				if (contexto != null && !ConnectivityAndInternetAccess.isConnectedOrConnecting(contexto)) {
+				if (contexto != null && !ConnectivityAndInternetAccess.isConnected(contexto)) {
 					return null;
 				}
 
@@ -205,7 +202,6 @@ public class AsignaImagenDeURL extends AsyncTask<String,Void,Void> {
 	@Override
 	protected void onPostExecute(Void result) {
 		super.onPostExecute(result);
-		ConnectivityAndInternetAccess.endConnectionAttempt();
 		if (img != null) {
 			Object tag = img.getTag();
 			if (mapaDeBits != null && (tag == null || tag.equals(currentUrl))) {
@@ -217,7 +213,6 @@ public class AsignaImagenDeURL extends AsyncTask<String,Void,Void> {
 	@Override
 	protected void onCancelled() {
 		super.onCancelled();
-		ConnectivityAndInternetAccess.endConnectionAttempt();
 		if (f != null && f.exists()) {
 			try { f.delete(); } catch(Exception ex){} 
 		}

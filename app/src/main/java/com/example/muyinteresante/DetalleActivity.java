@@ -3,6 +3,7 @@ package com.example.muyinteresante;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.view.OnApplyWindowInsetsListener;
 import android.support.v4.view.ViewCompat;
@@ -20,6 +21,8 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+
+import com.example.muyinteresante.util.ConnectivityAndInternetAccess;
 
 public class DetalleActivity extends AppCompatActivity {
 
@@ -103,15 +106,58 @@ public class DetalleActivity extends AppCompatActivity {
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
                 super.onReceivedError(view, request, error);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                        && request.isForMainFrame()
+                        && esFalloDeConectividad(error != null ? error.getErrorCode() : -1)) {
+                    diagnosticarFalloArticulo();
+                }
+            }
+
+            @Override
+            @SuppressWarnings("deprecation")
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                super.onReceivedError(view, errorCode, description, failingUrl);
+                if (failingUrl != null && failingUrl.equals(articleUrl) && esFalloDeConectividad(errorCode)) {
+                    diagnosticarFalloArticulo();
+                }
             }
         });
 
-        if (articleUrl != null && !articleUrl.isEmpty()) {
+        if (articleUrl != null && !articleUrl.isEmpty()
+                && ConnectivityAndInternetAccess.isConnected(this)) {
             webView.loadUrl(articleUrl);
+        } else if (articleUrl != null && !articleUrl.isEmpty()) {
+            Toast.makeText(this, "Sin conexión. No se puede cargar el artículo.", Toast.LENGTH_LONG).show();
         } else {
             Toast.makeText(this, "URL no válida", Toast.LENGTH_SHORT).show();
             finish();
         }
+    }
+
+    private boolean esFalloDeConectividad(int errorCode) {
+        return errorCode == WebViewClient.ERROR_HOST_LOOKUP
+                || errorCode == WebViewClient.ERROR_CONNECT
+                || errorCode == WebViewClient.ERROR_TIMEOUT
+                || errorCode == WebViewClient.ERROR_IO
+                || errorCode == WebViewClient.ERROR_FAILED_SSL_HANDSHAKE;
+    }
+
+    private void diagnosticarFalloArticulo() {
+        new ConnectivityAndInternetAccess.Builder().build().checkInternetAsync(this,
+                new ConnectivityAndInternetAccess.InternetCallback() {
+                    @Override
+                    public void onResult(ConnectivityAndInternetAccess.InternetResult result) {
+                        if (result != null && result.isReachable()) {
+                            Toast.makeText(DetalleActivity.this,
+                                    "El artículo no está disponible, aunque Internet general funciona.",
+                                    Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(DetalleActivity.this,
+                                    "Problema de conectividad al cargar el artículo.",
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
     }
 
     @Override
@@ -128,8 +174,10 @@ public class DetalleActivity extends AppCompatActivity {
             finish();
             return true;
         } else if (id == R.id.menu_actualizar) {
-            if (webView != null) {
+            if (webView != null && ConnectivityAndInternetAccess.isConnected(this)) {
                 webView.reload();
+            } else if (webView != null) {
+                Toast.makeText(this, "Sin conexión. Se mantiene el artículo actual.", Toast.LENGTH_LONG).show();
             }
             return true;
         } else if (id == R.id.action_abrir_navegador || id == R.id.action_test_conectividad) {

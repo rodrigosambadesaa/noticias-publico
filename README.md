@@ -8,4 +8,8 @@ The build tries Público direct RSS and HTML RSS autodiscovery first. If Públic
 
 Includes search, refresh, sharing, article view, offline cache, infinite scroll through older feed windows, passive NetworkObserver, DNS-first reachability, and optional ICMP diagnostics. The current requested gist is vendored under third_party/connectivity.
 
+## Network request flow
+
+Remote operations first use the cheap passive `isConnected()`/`NetworkCapabilities` guard. When a usable network exists, RSS and article requests run directly; the real response remains authoritative for redirects, HTTP status codes, timeouts and parsing. The active `ConnectivityAndInternetAccess` diagnostic runs only after an ambiguous connectivity failure without an HTTP response. A valid HTTP response, including a feed/server error status, is reported as a service-specific failure without launching a redundant general probe. Offline guards use the cached news and the corresponding offline UI.
+
 This is not an official Público application.
