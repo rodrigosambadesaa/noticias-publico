@@ -12,4 +12,8 @@ Includes search, refresh, sharing, article view, offline cache, infinite scroll 
 
 Remote operations first use the cheap passive `isConnected()`/`NetworkCapabilities` guard. When a usable network exists, RSS and article requests run directly; the real response remains authoritative for redirects, HTTP status codes, timeouts and parsing. The active `ConnectivityAndInternetAccess` diagnostic runs only after an ambiguous connectivity failure without an HTTP response. A valid HTTP response, including a feed/server error status, is reported as a service-specific failure without launching a redundant general probe. Offline guards use the cached news and the corresponding offline UI.
 
+## Orientation state
+
+La actividad principal conserva la lista y la posición actual del `RecyclerView` al cambiar la orientación. Además, guarda y restaura el estado para recreaciones posteriores sin relanzar la descarga RSS.
+
 This is not an official Público application.

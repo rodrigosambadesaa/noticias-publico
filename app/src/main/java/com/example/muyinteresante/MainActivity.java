@@ -2,6 +2,7 @@ package com.example.muyinteresante;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.support.v4.view.OnApplyWindowInsetsListener;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.view.WindowInsetsCompat;
@@ -41,6 +42,12 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
     private static final String RSS_PAGE_URL = "https://news.google.com/rss/search?q=site%3Apublico.es";
     private static final int LOAD_MORE_THRESHOLD = 4;
     private static final int MAX_CONSECUTIVE_DUPLICATE_PAGES = 2;
+    private static final String STATE_HAS_NEWS = "main_has_news";
+    private static final String STATE_LAYOUT = "main_layout_state";
+    private static final String STATE_HAS_MORE = "main_has_more";
+    private static final String STATE_NEXT_PAGE = "main_next_page";
+    private static final String STATE_ARCHIVE_BEFORE = "main_archive_before";
+    private static final String STATE_DUPLICATES = "main_duplicate_pages";
 
     private SwipeRefreshLayout swipeRefreshLayout;
     private RecyclerView rvNoticias;
@@ -168,8 +175,61 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
         layoutNetworkStatusPill.setOnClickListener(listenerDiagnostico);
         btnDiagnosticarRed.setOnClickListener(listenerDiagnostico);
 
-        // Cargar noticias iniciales (intenta descargar o usa caché offline)
-        cargarNoticiasIniciales();
+        // Tras una recreación por orientación, restaura la lista y el scroll desde
+        // el estado/caché y no vuelve a iniciar la descarga del feed.
+        if (!restaurarEstadoTrasRecreacion(savedInstanceState, layoutManager)) {
+            cargarNoticiasIniciales();
+        }
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        boolean hasNews = adapter != null && adapter.getItemCount() > 0;
+        outState.putBoolean(STATE_HAS_NEWS, hasNews);
+        if (rvNoticias != null && rvNoticias.getLayoutManager() != null) {
+            outState.putParcelable(STATE_LAYOUT, rvNoticias.getLayoutManager().onSaveInstanceState());
+        }
+        outState.putBoolean(STATE_HAS_MORE, hasMoreNews);
+        outState.putInt(STATE_NEXT_PAGE, nextArchivePage);
+        outState.putInt(STATE_DUPLICATES, consecutiveDuplicatePages);
+        if (archiveBeforeDate != null) {
+            outState.putLong(STATE_ARCHIVE_BEFORE, archiveBeforeDate.getTime());
+        }
+    }
+
+    private boolean restaurarEstadoTrasRecreacion(Bundle savedInstanceState,
+                                                   final LinearLayoutManager layoutManager) {
+        if (savedInstanceState == null || !savedInstanceState.getBoolean(STATE_HAS_NEWS, false)) {
+            return false;
+        }
+
+        ArrayList<NoticiaRSS> cached = NewsCacheManager.loadNewsFromCache(this);
+        if (cached == null || cached.isEmpty()) {
+            return false;
+        }
+
+        adapter.updateData(cached);
+        layoutEmptyState.setVisibility(View.GONE);
+        rvNoticias.setVisibility(View.VISIBLE);
+        hasMoreNews = savedInstanceState.getBoolean(STATE_HAS_MORE, false);
+        nextArchivePage = savedInstanceState.getInt(STATE_NEXT_PAGE, 2);
+        consecutiveDuplicatePages = savedInstanceState.getInt(STATE_DUPLICATES, 0);
+        if (savedInstanceState.containsKey(STATE_ARCHIVE_BEFORE)) {
+            archiveBeforeDate = new Date(savedInstanceState.getLong(STATE_ARCHIVE_BEFORE));
+        }
+
+        final Parcelable layoutState = savedInstanceState.getParcelable(STATE_LAYOUT);
+        if (layoutState != null) {
+            rvNoticias.post(new Runnable() {
+                @Override
+                public void run() {
+                    layoutManager.onRestoreInstanceState(layoutState);
+                }
+            });
+        }
+        Log.d(TAG, "Estado restaurado tras recreación; se omite nueva descarga RSS.");
+        return true;
     }
 
     @Override
