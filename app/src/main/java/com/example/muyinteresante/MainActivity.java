@@ -17,6 +17,7 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -100,6 +101,10 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
         // Soporte para márgenes de ventana/cámara en smartphones tipo S25 Ultra
         final View rootView = findViewById(android.R.id.content);
         if (rootView != null) {
+            final int toolbarHeight = getResources().getDimensionPixelSize(R.dimen.toolbar_height);
+            final int toolbarPaddingLeft = toolbar.getPaddingLeft();
+            final int toolbarPaddingRight = toolbar.getPaddingRight();
+            final int recyclerPaddingBottom = rvNoticias.getPaddingBottom();
             ViewCompat.setOnApplyWindowInsetsListener(rootView, new OnApplyWindowInsetsListener() {
                 @Override
                 public WindowInsetsCompat onApplyWindowInsets(View v, WindowInsetsCompat insets) {
@@ -109,10 +114,13 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
                     int right = insets.getSystemWindowInsetRight();
 
                     if (toolbar != null && top > 0) {
-                        toolbar.setPadding(left, top, right, 0);
+                        toolbar.setPadding(toolbarPaddingLeft + left, top, toolbarPaddingRight + right, 0);
+                        ViewGroup.LayoutParams toolbarParams = toolbar.getLayoutParams();
+                        toolbarParams.height = toolbarHeight + top;
+                        toolbar.setLayoutParams(toolbarParams);
                     }
                     if (rvNoticias != null && bottom > 0) {
-                        rvNoticias.setPadding(left, rvNoticias.getPaddingTop(), right, bottom + 12);
+                        rvNoticias.setPadding(left, rvNoticias.getPaddingTop(), right, recyclerPaddingBottom + bottom);
                     }
                     return insets;
                 }

@@ -13,6 +13,7 @@ import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
@@ -55,6 +56,9 @@ public class DetalleActivity extends AppCompatActivity {
         // Soporte para márgenes de ventana/cámara (S25 Ultra Notch/Cutout & Insets)
         final View rootView = findViewById(android.R.id.content);
         if (rootView != null) {
+            final int toolbarHeight = getResources().getDimensionPixelSize(R.dimen.toolbar_height);
+            final int toolbarPaddingLeft = toolbar.getPaddingLeft();
+            final int toolbarPaddingRight = toolbar.getPaddingRight();
             ViewCompat.setOnApplyWindowInsetsListener(rootView, new OnApplyWindowInsetsListener() {
                 @Override
                 public WindowInsetsCompat onApplyWindowInsets(View v, WindowInsetsCompat insets) {
@@ -64,7 +68,10 @@ public class DetalleActivity extends AppCompatActivity {
                     int right = insets.getSystemWindowInsetRight();
 
                     if (toolbar != null && top > 0) {
-                        toolbar.setPadding(left, top, right, 0);
+                        toolbar.setPadding(toolbarPaddingLeft + left, top, toolbarPaddingRight + right, 0);
+                        ViewGroup.LayoutParams toolbarParams = toolbar.getLayoutParams();
+                        toolbarParams.height = toolbarHeight + top;
+                        toolbar.setLayoutParams(toolbarParams);
                     }
                     if (webView != null && bottom > 0) {
                         webView.setPadding(left, 0, right, bottom);
