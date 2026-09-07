@@ -1,6 +1,7 @@
 package com.example.muyinteresante;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.support.v4.view.OnApplyWindowInsetsListener;
@@ -282,7 +283,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             // Disconnected / Offline
             viewNetworkDot.setBackgroundResource(R.color.status_offline);
             tvNetworkStatusText.setText(isAirplane ? "Modo Avión" : "Sin red");
-            tvNetworkStatusText.setTextColor(getResources().getColor(R.color.status_offline));
+            tvNetworkStatusText.setTextColor(Color.WHITE);
 
             bannerNetworkNotice.setVisibility(View.VISIBLE);
             bannerNetworkNotice.setBackgroundResource(R.color.status_offline_bg);
@@ -293,7 +294,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             // Captive Portal
             viewNetworkDot.setBackgroundResource(R.color.status_warning);
             tvNetworkStatusText.setText("Portal Cautivo");
-            tvNetworkStatusText.setTextColor(getResources().getColor(R.color.status_warning));
+            tvNetworkStatusText.setTextColor(Color.WHITE);
 
             bannerNetworkNotice.setVisibility(View.VISIBLE);
             bannerNetworkNotice.setBackgroundResource(R.color.status_warning_bg);
@@ -302,7 +303,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             // Connected without validated internet
             viewNetworkDot.setBackgroundResource(R.color.status_warning);
             tvNetworkStatusText.setText("Conectando...");
-            tvNetworkStatusText.setTextColor(getResources().getColor(R.color.status_warning));
+            tvNetworkStatusText.setTextColor(Color.WHITE);
 
             bannerNetworkNotice.setVisibility(View.VISIBLE);
             bannerNetworkNotice.setBackgroundResource(R.color.status_warning_bg);
@@ -320,7 +321,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
                 statusType = isFast ? "Online (4G/5G)" : "Online (Móvil Lento)";
             }
             tvNetworkStatusText.setText(statusType);
-            tvNetworkStatusText.setTextColor(getResources().getColor(R.color.status_online));
+            tvNetworkStatusText.setTextColor(Color.WHITE);
 
             bannerNetworkNotice.setVisibility(View.GONE);
         }

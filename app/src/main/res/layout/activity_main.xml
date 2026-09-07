@@ -27,10 +27,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_centerVertical="true"
+                android:layout_alignParentLeft="true"
+                android:layout_toLeftOf="@id/layoutNetworkStatusPill"
+                android:layout_marginRight="12dp"
                 android:text="Noticias Público"
                 android:textColor="#FFFFFF"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:maxLines="1"
+                android:ellipsize="end" />
 
             <!-- Network Status Pill Badge -->
             <LinearLayout
@@ -57,7 +62,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Online"
-                    android:textColor="@color/status_online"
+                    android:textColor="#FFFFFF"
                     android:textSize="12sp"
                     android:textStyle="bold" />
             </LinearLayout>
