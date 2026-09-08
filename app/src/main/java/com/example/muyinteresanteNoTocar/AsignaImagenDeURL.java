@@ -20,6 +20,7 @@ import android.util.Log;
 import android.widget.ImageView;
 
 import com.example.muyinteresante.util.ConnectivityAndInternetAccess;
+import com.example.muyinteresante.util.RemoteOperationPolicy;
 
 public class AsignaImagenDeURL extends AsyncTask<String,Void,Void> {
 	private static final String TAG = "AsignaImagenDeURL";
@@ -59,7 +60,7 @@ public class AsignaImagenDeURL extends AsyncTask<String,Void,Void> {
 					if (mapaDeBits != null) return null;
 				}
 
-				if (contexto != null && !ConnectivityAndInternetAccess.isConnected(contexto)) {
+				if (contexto != null && !RemoteOperationPolicy.hasUsableNetwork(contexto)) {
 					return null;
 				}
 

@@ -16,4 +16,6 @@ Remote operations first use the cheap passive `isConnected()`/`NetworkCapabiliti
 
 La actividad principal conserva la lista y la posición actual del `RecyclerView` al cambiar la orientación. Además, guarda y restaura el estado para recreaciones posteriores sin relanzar la descarga RSS.
 
+Before starting a download, the app also confirms that Android still reports a connected active interface, preventing stale capabilities from showing the progress indicator without a real network.
+
 This is not an official Público application.

@@ -72,6 +72,13 @@ public class DescargaNoticiasRSS extends AsyncTask<String,Integer,ArrayList<Noti
 	@Override
 	protected void onPreExecute() {
 		super.onPreExecute();
+
+		// Defensa final para cualquier caller: nunca mostramos progreso ni
+		// iniciamos la petición si el dispositivo ya no tiene red activa.
+		if (contexto != null && !RemoteOperationPolicy.hasUsableNetwork(contexto)) {
+			cancel(false);
+			return;
+		}
 		
 		if (mostrarProgreso && contexto != null) {
 			pd = new ProgressDialog(contexto);

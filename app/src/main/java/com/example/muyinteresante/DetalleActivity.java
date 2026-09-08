@@ -24,6 +24,7 @@ import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.example.muyinteresante.util.ConnectivityAndInternetAccess;
+import com.example.muyinteresante.util.RemoteOperationPolicy;
 
 public class DetalleActivity extends AppCompatActivity {
 
@@ -131,7 +132,7 @@ public class DetalleActivity extends AppCompatActivity {
         });
 
         if (articleUrl != null && !articleUrl.isEmpty()
-                && ConnectivityAndInternetAccess.isConnected(this)) {
+                && RemoteOperationPolicy.hasUsableNetwork(this)) {
             webView.loadUrl(articleUrl);
         } else if (articleUrl != null && !articleUrl.isEmpty()) {
             Toast.makeText(this, "Sin conexión. No se puede cargar el artículo.", Toast.LENGTH_LONG).show();
@@ -181,7 +182,7 @@ public class DetalleActivity extends AppCompatActivity {
             finish();
             return true;
         } else if (id == R.id.menu_actualizar) {
-            if (webView != null && ConnectivityAndInternetAccess.isConnected(this)) {
+            if (webView != null && RemoteOperationPolicy.hasUsableNetwork(this)) {
                 webView.reload();
             } else if (webView != null) {
                 Toast.makeText(this, "Sin conexión. Se mantiene el artículo actual.", Toast.LENGTH_LONG).show();

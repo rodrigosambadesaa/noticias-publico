@@ -328,6 +328,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
     }
 
     private void cargarNoticiasIniciales() {
+        swipeRefreshLayout.setRefreshing(false);
         // Cargar desde caché offline primero para renderizado instantáneo
         ArrayList<NoticiaRSS> cached = NewsCacheManager.loadNewsFromCache(this);
         if (cached != null && !cached.isEmpty()) {
@@ -342,7 +343,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
 
     private void ejecutarDescargarNoticias() {
         // Comprobación rápida inicial de estado de red antes del sondeador activo
-        if (!RemoteOperationPolicy.hasUsableNetwork(ConnectivityAndInternetAccess.isConnected(this))) {
+        if (!RemoteOperationPolicy.hasUsableNetwork(this)) {
             Toast.makeText(this, "Sin conexión disponible para iniciar la descarga.", Toast.LENGTH_SHORT).show();
             usarNoticiasOffline();
             return;
@@ -363,7 +364,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             return;
         }
 
-        if (!RemoteOperationPolicy.hasUsableNetwork(ConnectivityAndInternetAccess.isConnected(this))) {
+        if (!RemoteOperationPolicy.hasUsableNetwork(this)) {
             Log.d(TAG, "No se cargan más noticias: sin conexión disponible.");
             Toast.makeText(this, "Sin conexión. Mostrando las noticias guardadas.", Toast.LENGTH_SHORT).show();
             return;
