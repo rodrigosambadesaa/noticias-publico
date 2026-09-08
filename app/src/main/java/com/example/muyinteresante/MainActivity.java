@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.os.Build;
 import android.support.v4.view.OnApplyWindowInsetsListener;
 import android.support.v4.view.ViewCompat;
 import android.support.v4.view.WindowInsetsCompat;
@@ -70,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
     private ConnectivityAndInternetAccess.NetworkState currentNetworkState;
 
     private boolean isLoadingMore = false;
+    private Toast activeToast;
     private boolean hasMoreNews = false;
     private int nextArchivePage = 2;
     private int consecutiveDuplicatePages = 0;
@@ -267,6 +269,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
         // Comprobaciones avanzadas de red usando los métodos relevantes de ConnectivityAndInternetAccess
         boolean isConnectedOrConnecting = ConnectivityAndInternetAccess.isConnectedOrConnecting(this);
         boolean isConnected = ConnectivityAndInternetAccess.isConnected(this);
+        boolean hasUsableNetwork = RemoteOperationPolicy.hasUsableNetwork(this);
         boolean isWifi = ConnectivityAndInternetAccess.isConnectedWifi(this);
         boolean isMobile = ConnectivityAndInternetAccess.isConnectedMobile(this);
         boolean isVpn = ConnectivityAndInternetAccess.vpnActive(this);
@@ -279,7 +282,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
                 ", Connected=" + isConnected + ", Wifi=" + isWifi + ", Mobile=" + isMobile +
                 ", VPN=" + isVpn + ", Airplane=" + isAirplane + ", Fast=" + isFast);
 
-        if (!isConnectedOrConnecting && !isConnected) {
+        if (!hasUsableNetwork) {
             // Disconnected / Offline
             viewNetworkDot.setBackgroundResource(R.color.status_offline);
             tvNetworkStatusText.setText(isAirplane ? "Modo Avión" : "Sin red");
@@ -299,7 +302,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             bannerNetworkNotice.setVisibility(View.VISIBLE);
             bannerNetworkNotice.setBackgroundResource(R.color.status_warning_bg);
             tvBannerText.setText("Se requiere inicio de sesión en red (Portal Cautivo detectado).");
-        } else if (!isValidated && !isConnected) {
+        } else if (!isValidated && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             // Connected without validated internet
             viewNetworkDot.setBackgroundResource(R.color.status_warning);
             tvNetworkStatusText.setText("Conectando...");
@@ -344,7 +347,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
     private void ejecutarDescargarNoticias() {
         // Comprobación rápida inicial de estado de red antes del sondeador activo
         if (!RemoteOperationPolicy.hasUsableNetwork(this)) {
-            Toast.makeText(this, "Sin conexión disponible para iniciar la descarga.", Toast.LENGTH_SHORT).show();
+            mostrarToast("Sin conexión disponible para iniciar la descarga.", Toast.LENGTH_SHORT);
             usarNoticiasOffline();
             return;
         }
@@ -366,7 +369,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
 
         if (!RemoteOperationPolicy.hasUsableNetwork(this)) {
             Log.d(TAG, "No se cargan más noticias: sin conexión disponible.");
-            Toast.makeText(this, "Sin conexión. Mostrando las noticias guardadas.", Toast.LENGTH_SHORT).show();
+            mostrarToast("Sin conexión. Mostrando las noticias guardadas.", Toast.LENGTH_SHORT);
             return;
         }
 
@@ -472,7 +475,6 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             adapter.updateData(cached);
             layoutEmptyState.setVisibility(View.GONE);
             rvNoticias.setVisibility(View.VISIBLE);
-            Toast.makeText(this, "Mostrando noticias guardadas en modo offline", Toast.LENGTH_SHORT).show();
         } else {
             rvNoticias.setVisibility(View.GONE);
             layoutEmptyState.setVisibility(View.VISIBLE);
@@ -502,7 +504,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             // DescargaNoticiasRSS ya notificó el error clasificado a onError().
             return;
         } else {
-            Toast.makeText(this, "No se pudieron obtener nuevas noticias del canal RSS", Toast.LENGTH_SHORT).show();
+            mostrarToast("No se pudieron obtener nuevas noticias del canal RSS", Toast.LENGTH_SHORT);
             usarNoticiasOffline();
         }
     }
@@ -523,13 +525,11 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
                         public void onResult(ConnectivityAndInternetAccess.InternetResult result) {
                             boolean internetGeneral = result != null && result.isReachable();
                             if (internetGeneral) {
-                                Toast.makeText(MainActivity.this,
-                                        "El feed no está disponible ahora, aunque Internet general funciona.",
-                                        Toast.LENGTH_LONG).show();
+                                mostrarToast("El feed no está disponible ahora, aunque Internet general funciona.",
+                                        Toast.LENGTH_LONG);
                             } else {
-                                Toast.makeText(MainActivity.this,
-                                        "Problema de conectividad. Se muestran noticias guardadas.",
-                                        Toast.LENGTH_LONG).show();
+                                mostrarToast("Problema de conectividad. Se muestran noticias guardadas.",
+                                        Toast.LENGTH_LONG);
                             }
                             if (mostrarCache) {
                                 usarNoticiasOffline();
@@ -541,10 +541,18 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
 
         String status = error != null && error.getHttpStatus() > 0
                 ? " (HTTP " + error.getHttpStatus() + ")" : "";
-        Toast.makeText(this, "No se pudo cargar " + servicio + status + ". Se muestran noticias guardadas.", Toast.LENGTH_LONG).show();
+        mostrarToast("No se pudo cargar " + servicio + status + ". Se muestran noticias guardadas.", Toast.LENGTH_LONG);
         if (mostrarCache) {
             usarNoticiasOffline();
         }
+    }
+
+    private void mostrarToast(CharSequence message, int duration) {
+        if (activeToast != null) {
+            activeToast.cancel();
+        }
+        activeToast = Toast.makeText(this, message, duration);
+        activeToast.show();
     }
 
     private void ejecutarDiagnosticoRedCompleto() {
