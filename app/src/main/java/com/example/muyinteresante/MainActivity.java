@@ -268,8 +268,8 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
     private void actualizarInterfazEstadoRed(ConnectivityAndInternetAccess.NetworkState state) {
         // Comprobaciones avanzadas de red usando los métodos relevantes de ConnectivityAndInternetAccess
         boolean isConnectedOrConnecting = ConnectivityAndInternetAccess.isConnectedOrConnecting(this);
-        boolean isConnected = ConnectivityAndInternetAccess.isConnected(this);
         boolean hasUsableNetwork = RemoteOperationPolicy.hasUsableNetwork(this);
+        boolean isConnected = hasUsableNetwork;
         boolean isWifi = ConnectivityAndInternetAccess.isConnectedWifi(this);
         boolean isMobile = ConnectivityAndInternetAccess.isConnectedMobile(this);
         boolean isVpn = ConnectivityAndInternetAccess.vpnActive(this);
@@ -277,6 +277,8 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
         boolean isFast = ConnectivityAndInternetAccess.isConnectedFast(this);
         boolean isCaptive = ConnectivityAndInternetAccess.isCaptivePortalDetected(this);
         boolean isValidated = ConnectivityAndInternetAccess.isInternetValidated(this);
+        boolean hasValidatedInternet = hasUsableNetwork
+                && (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || isValidated);
 
         Log.d(TAG, "Chequeo de red: ConnectedOrConnecting=" + isConnectedOrConnecting +
                 ", Connected=" + isConnected + ", Wifi=" + isWifi + ", Mobile=" + isMobile +
@@ -284,6 +286,8 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
 
         if (!hasUsableNetwork) {
             // Disconnected / Offline
+            swipeRefreshLayout.setRefreshing(false);
+            isLoadingMore = false;
             viewNetworkDot.setBackgroundResource(R.color.status_offline);
             tvNetworkStatusText.setText(isAirplane ? "Modo Avión" : "Sin red");
             tvNetworkStatusText.setTextColor(Color.WHITE);
@@ -302,15 +306,15 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             bannerNetworkNotice.setVisibility(View.VISIBLE);
             bannerNetworkNotice.setBackgroundResource(R.color.status_warning_bg);
             tvBannerText.setText("Se requiere inicio de sesión en red (Portal Cautivo detectado).");
-        } else if (!isValidated && Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            // Connected without validated internet
+        } else if (!hasValidatedInternet) {
+            // Hay una interfaz activa, pero Android no ha verificado Internet.
             viewNetworkDot.setBackgroundResource(R.color.status_warning);
-            tvNetworkStatusText.setText("Conectando...");
+            tvNetworkStatusText.setText("Sin Internet");
             tvNetworkStatusText.setTextColor(Color.WHITE);
 
             bannerNetworkNotice.setVisibility(View.VISIBLE);
             bannerNetworkNotice.setBackgroundResource(R.color.status_warning_bg);
-            tvBannerText.setText("Conectado a la interfaz de red pero sin acceso verificado a internet.");
+            tvBannerText.setText("Red activa, pero sin acceso verificado a Internet.");
         } else {
             // Fully connected & validated
             viewNetworkDot.setBackgroundResource(R.color.status_online);
@@ -347,6 +351,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
     private void ejecutarDescargarNoticias() {
         // Comprobación rápida inicial de estado de red antes del sondeador activo
         if (!RemoteOperationPolicy.hasUsableNetwork(this)) {
+            swipeRefreshLayout.setRefreshing(false);
             mostrarToast("Sin conexión disponible para iniciar la descarga.", Toast.LENGTH_SHORT);
             usarNoticiasOffline();
             return;
@@ -562,31 +567,49 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
                 .setPositiveButton("Cerrar", null)
                 .show();
 
-        // Chequeos estáticos rápidos de ConnectivityAndInternetAccess
-        boolean isConnectedOrConnecting = ConnectivityAndInternetAccess.isConnectedOrConnecting(this);
-        boolean isConnected = ConnectivityAndInternetAccess.isConnected(this);
-        boolean isWifi = ConnectivityAndInternetAccess.isConnectedWifi(this);
-        boolean isMobile = ConnectivityAndInternetAccess.isConnectedMobile(this);
-        boolean isFast = ConnectivityAndInternetAccess.isConnectedFast(this);
-        boolean isVpn = ConnectivityAndInternetAccess.vpnActive(this);
-        boolean isAirplane = ConnectivityAndInternetAccess.isAirplaneModeOn(this);
+        if (!RemoteOperationPolicy.hasUsableNetwork(this)) {
+            dialog.setMessage("📡 ESTADO DE INTERFAZ DE RED:\n"
+                    + "• Estado general: Desconectado\n"
+                    + "• Tipo de red: Ninguna\n"
+                    + "• Internet Real: NO (Sin Internet)\n\n"
+                    + "No hay una interfaz de red activa para ejecutar el diagnóstico.");
+            return;
+        }
 
         // Sondeo activo DNS/HTTP
         ConnectivityAndInternetAccess.checkInternetAsyncDefault(this, new ConnectivityAndInternetAccess.InternetCallback() {
             @Override
             public void onResult(ConnectivityAndInternetAccess.InternetResult result) {
                 if (dialog != null && dialog.isShowing()) {
+                    boolean connectedNow = RemoteOperationPolicy.hasUsableNetwork(MainActivity.this);
+                    boolean validatedNow = connectedNow
+                            && (Build.VERSION.SDK_INT < Build.VERSION_CODES.M
+                            || ConnectivityAndInternetAccess.isInternetValidated(MainActivity.this));
+                    boolean isConnectedOrConnectingNow = connectedNow
+                            && ConnectivityAndInternetAccess.isConnectedOrConnecting(MainActivity.this);
+                    boolean isWifiNow = connectedNow
+                            && ConnectivityAndInternetAccess.isConnectedWifi(MainActivity.this);
+                    boolean isMobileNow = connectedNow
+                            && ConnectivityAndInternetAccess.isConnectedMobile(MainActivity.this);
+                    boolean isFastNow = connectedNow
+                            && ConnectivityAndInternetAccess.isConnectedFast(MainActivity.this);
+                    boolean isVpnNow = connectedNow
+                            && ConnectivityAndInternetAccess.vpnActive(MainActivity.this);
+                    boolean isAirplaneNow = ConnectivityAndInternetAccess.isAirplaneModeOn(MainActivity.this);
                     boolean reachable = result != null && result.isReachable();
                     String reachedHost = result != null ? result.getReachedHost() : "Ninguno";
                     long time = result != null ? result.getElapsedMilliseconds() : 0;
 
                     StringBuilder sb = new StringBuilder();
                     sb.append("📡 ESTADO DE INTERFAZ DE RED:\n");
-                    sb.append("• Estado general: ").append(isConnected ? "Conectado" : (isConnectedOrConnecting ? "Conectando..." : "Desconectado")).append("\n");
-                    sb.append("• Tipo de red: ").append(isWifi ? "Wi-Fi" : (isMobile ? "Móvil / Celular" : "Otra / Ninguna")).append("\n");
-                    sb.append("• Velocidad estimada: ").append(isFast ? "Rápida (High Speed)" : "Lenta / Desconocida").append("\n");
-                    sb.append("• Red VPN Activa: ").append(isVpn ? "SÍ" : "No").append("\n");
-                    sb.append("• Modo Avión: ").append(isAirplane ? "ACTIVADO" : "Desactivado").append("\n\n");
+                    String interfaceStatus = !connectedNow
+                            ? (isConnectedOrConnectingNow ? "Conectando..." : "Desconectado")
+                            : (validatedNow ? "Conectado a Internet" : "Red activa, Internet no verificada");
+                    sb.append("• Estado general: ").append(interfaceStatus).append("\n");
+                    sb.append("• Tipo de red: ").append(isWifiNow ? "Wi-Fi" : (isMobileNow ? "Móvil / Celular" : "Otra / Ninguna")).append("\n");
+                    sb.append("• Velocidad estimada: ").append(isFastNow ? "Rápida (High Speed)" : "Lenta / Desconocida").append("\n");
+                    sb.append("• Red VPN Activa: ").append(isVpnNow ? "SÍ" : "No").append("\n");
+                    sb.append("• Modo Avión: ").append(isAirplaneNow ? "ACTIVADO" : "Desactivado").append("\n\n");
 
                     sb.append("🔍 PRUEBA ACTIVA DNS/HTTP (GIST):\n");
                     sb.append("• Internet Real: ").append(reachable ? "SÍ (Internet Verificado)" : "NO (Sin Internet)").append("\n");
