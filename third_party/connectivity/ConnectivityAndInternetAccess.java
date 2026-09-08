@@ -816,6 +816,32 @@ public final class ConnectivityAndInternetAccess {
         return connected;
     }
 
+    /**
+     * Cheap passive guard that ignores a dangling VPN-only default network.
+     * A VPN capability can remain present after its underlying Wi-Fi/mobile
+     * transport disappeared, so it must not make the app appear connected.
+     */
+    public static boolean hasPhysicalNetwork(Context context) {
+        requireContext(context);
+        ConnectivityManager connectivityManager = manager(context);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            for (Network network : connectivityManager.getAllNetworks()) {
+                NetworkCapabilities capabilities =
+                        connectivityManager.getNetworkCapabilities(network);
+                if (isUsable(capabilities)
+                        && (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                        || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                        || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return isConnectedLegacy(connectivityManager.getActiveNetworkInfo());
+    }
+
     /** Returns a cheap point-in-time snapshot of the application's default network. */
     public static NetworkState snapshotNetworkState(Context context) {
         requireContext(context);
@@ -2572,4 +2598,3 @@ public final class ConnectivityAndInternetAccess {
         }
     }
 }
-

@@ -18,4 +18,16 @@ La actividad principal conserva la lista y la posición actual del `RecyclerView
 
 Before starting a download, the app also confirms that Android still reports a connected active interface, preventing stale capabilities from showing the progress indicator without a real network.
 
+## VPN/AdGuard manual checks
+
+The request guard is `isConnected(context) && hasPhysicalNetwork(context)`. A VPN
+transport by itself is not treated as a usable physical network, while a VPN over
+Wi-Fi, mobile data, or Ethernet remains usable. To verify this on a device, repeat
+initial load, pull-to-refresh, retry, and infinite-scroll pagination in these states:
+
+1. Airplane mode or no interface: no RSS request, no progress indicator, cached/offline UI.
+2. VPN/AdGuard with its underlying Wi-Fi/mobile interface disconnected: same offline behavior.
+3. VPN/AdGuard over an active Wi-Fi/mobile interface: the real RSS request runs directly.
+4. Feed failure with a physical network: the app runs the general diagnostic only for an ambiguous connectivity exception; a valid HTTP status is reported as a feed/service result.
+
 This is not an official Público application.

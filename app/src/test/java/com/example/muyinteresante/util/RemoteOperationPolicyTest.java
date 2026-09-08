@@ -14,8 +14,10 @@ public class RemoteOperationPolicyTest {
 
     @Test
     public void offlineGuardStopsRemoteRequestImmediately() {
-        assertFalse(RemoteOperationPolicy.hasUsableNetwork(false));
-        assertTrue(RemoteOperationPolicy.hasUsableNetwork(true));
+        assertFalse(RemoteOperationPolicy.hasUsableNetwork(false, false));
+        assertFalse(RemoteOperationPolicy.hasUsableNetwork(false, true));
+        assertFalse(RemoteOperationPolicy.hasUsableNetwork(true, false));
+        assertTrue(RemoteOperationPolicy.hasUsableNetwork(true, true));
     }
 
     @Test

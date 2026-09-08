@@ -7,7 +7,6 @@
  */
 package com.example.muyinteresante.util;
 
-import android.annotation.TargetApi;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -759,7 +758,7 @@ public final class ConnectivityAndInternetAccess {
                 ConnectionAttempt attempt = CONNECTION_ATTEMPT_QUEUE.removeFirst();
                 if (!attempt.closed) {
                     attempt.closed = true;
-                    decrementConnectionAttempts();
+                    CONNECTION_ATTEMPTS.updateAndGet(value -> value > 0 ? value - 1 : 0);
                     return;
                 }
             }
@@ -815,6 +814,32 @@ public final class ConnectivityAndInternetAccess {
             clearConnectionAttempts();
         }
         return connected;
+    }
+
+    /**
+     * Cheap passive guard that ignores a dangling VPN-only default network.
+     * A VPN capability can remain present after its underlying Wi-Fi/mobile
+     * transport disappeared, so it must not make the app appear connected.
+     */
+    public static boolean hasPhysicalNetwork(Context context) {
+        requireContext(context);
+        ConnectivityManager connectivityManager = manager(context);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            for (Network network : connectivityManager.getAllNetworks()) {
+                NetworkCapabilities capabilities =
+                        connectivityManager.getNetworkCapabilities(network);
+                if (isUsable(capabilities)
+                        && (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)
+                        || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)
+                        || capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return isConnectedLegacy(connectivityManager.getActiveNetworkInfo());
     }
 
     /** Returns a cheap point-in-time snapshot of the application's default network. */
@@ -1964,7 +1989,6 @@ public final class ConnectivityAndInternetAccess {
         return connectivityManager;
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private static boolean isUsable(NetworkCapabilities capabilities) {
         if (capabilities == null
                 || !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) {
@@ -1976,7 +2000,6 @@ public final class ConnectivityAndInternetAccess {
                         NetworkCapabilities.NET_CAPABILITY_NOT_SUSPENDED);
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private static boolean hasTransport(Context context, int transport) {
         requireContext(context);
         ConnectivityManager connectivityManager = manager(context);
@@ -2001,7 +2024,6 @@ public final class ConnectivityAndInternetAccess {
         return false;
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private static boolean hasTransport(
             Context context,
             Network network,
@@ -2034,7 +2056,6 @@ public final class ConnectivityAndInternetAccess {
         return false;
     }
 
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     private static boolean isFast(NetworkCapabilities capabilities) {
         return isUsable(capabilities)
                 && capabilities.getLinkDownstreamBandwidthKbps() >= MINIMUM_FAST_KBPS
@@ -2389,20 +2410,10 @@ public final class ConnectivityAndInternetAccess {
 
             attempt.closed = true;
             CONNECTION_ATTEMPT_QUEUE.remove(attempt);
-            decrementConnectionAttempts();
+            CONNECTION_ATTEMPTS.updateAndGet(value -> value > 0 ? value - 1 : 0);
             CONNECTION_ATTEMPT_STALLED.set(true);
             return true;
         }
-    }
-
-    private static void decrementConnectionAttempts() {
-        int current;
-        do {
-            current = CONNECTION_ATTEMPTS.get();
-            if (current <= 0) {
-                return;
-            }
-        } while (!CONNECTION_ATTEMPTS.compareAndSet(current, current - 1));
     }
 
     private static void expireTimedOutConnectionAttempts() {
@@ -2424,7 +2435,7 @@ public final class ConnectivityAndInternetAccess {
 
                 attempt.closed = true;
                 CONNECTION_ATTEMPT_QUEUE.removeFirst();
-                decrementConnectionAttempts();
+                CONNECTION_ATTEMPTS.updateAndGet(value -> value > 0 ? value - 1 : 0);
                 CONNECTION_ATTEMPT_STALLED.set(true);
             }
         }
@@ -2587,4 +2598,3 @@ public final class ConnectivityAndInternetAccess {
         }
     }
 }
-

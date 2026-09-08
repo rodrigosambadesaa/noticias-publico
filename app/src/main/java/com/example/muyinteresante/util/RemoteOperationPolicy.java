@@ -1,9 +1,6 @@
 package com.example.muyinteresante.util;
 
 import android.content.Context;
-import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-
 import java.net.ConnectException;
 import java.net.NoRouteToHostException;
 import java.net.SocketException;
@@ -13,7 +10,6 @@ import java.net.UnknownHostException;
 import javax.net.ssl.SSLException;
 
 /** Cheap guards and failure classification for normal remote operations. */
-@SuppressWarnings("deprecation")
 public final class RemoteOperationPolicy {
 
     public enum FailureKind {
@@ -24,25 +20,18 @@ public final class RemoteOperationPolicy {
 
     private RemoteOperationPolicy() {}
 
-    public static boolean hasUsableNetwork(boolean connected) {
-        return connected;
+    public static boolean hasUsableNetwork(boolean connected, boolean physicalNetwork) {
+        return connected && physicalNetwork;
     }
 
-    /**
-     * Cheap guard for starting a remote operation. The Gist's capabilities
-     * snapshot is combined with the current legacy-compatible active interface
-     * state so a stale network capability cannot start a download or spinner.
-     */
+    /** Cheap guard that rejects dangling VPN-only networks. */
     public static boolean hasUsableNetwork(Context context) {
         if (context == null) {
             return false;
         }
-        ConnectivityManager manager =
-                (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo activeInfo = manager != null ? manager.getActiveNetworkInfo() : null;
-        return activeInfo != null
-                && activeInfo.isConnected()
-                && ConnectivityAndInternetAccess.isConnected(context);
+        return hasUsableNetwork(
+                ConnectivityAndInternetAccess.isConnected(context),
+                ConnectivityAndInternetAccess.hasPhysicalNetwork(context));
     }
 
     public static FailureKind classify(Throwable failure, int httpStatus) {
