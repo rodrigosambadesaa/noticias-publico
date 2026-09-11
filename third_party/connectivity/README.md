@@ -1,4 +1,4 @@
 # ConnectivityAndInternetAccess
 Complete unmodified source: https://gist.github.com/rodrigosambadesaa/729cca29a031fef4e2f15751863b655f
-Pinned revision: ce7bd07ed17d10d48785a0c21527c8100ea6da7e
+Pinned revision: 3b0497e976765653a7467e3bd7d6bff28b96bd7c
 Compiled copy changes only package declaration.

@@ -129,6 +129,18 @@ public class DetalleActivity extends AppCompatActivity {
                     diagnosticarFalloArticulo();
                 }
             }
+
+            @Override
+            public void onReceivedHttpError(WebView view, WebResourceRequest request,
+                                             android.webkit.WebResourceResponse errorResponse) {
+                super.onReceivedHttpError(view, request, errorResponse);
+                // HTTP 4xx/5xx demuestra que el servidor respondió; no se debe
+                // ejecutar el diagnóstico general ni mostrar "sin Internet".
+                if (request != null && request.isForMainFrame() && errorResponse != null) {
+                    android.util.Log.w("DetalleActivity",
+                            "El artículo respondió HTTP " + errorResponse.getStatusCode());
+                }
+            }
         });
 
         if (articleUrl != null && !articleUrl.isEmpty()

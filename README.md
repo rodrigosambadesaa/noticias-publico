@@ -6,7 +6,7 @@ Feed mode: google-news-site-filter
 
 The build tries Público direct RSS and HTML RSS autodiscovery first. If Público does not expose a usable feed to a clean client, it falls back to Google News RSS restricted to site:publico.es.
 
-Includes search, refresh, sharing, article view, offline cache, infinite scroll through older feed windows, passive NetworkObserver, DNS-first reachability, and optional ICMP diagnostics. The current requested gist is vendored under third_party/connectivity.
+Includes search, refresh, sharing, article view, offline cache, infinite scroll through older feed windows, passive NetworkObserver, DNS-first reachability, and optional ICMP diagnostics. The current requested gist is vendored under third_party/connectivity at revision `3b0497e976765653a7467e3bd7d6bff28b96bd7c`.
 
 ## Network request flow
 
