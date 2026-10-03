@@ -1,0 +1,39 @@
+name: Build and upload timeout-fix APK
+
+on:
+  push:
+    paths:
+      - '.github/workflows/build-upload-timeout-apk.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 5a17af86f4746e9b26063d34dbba89f990225699
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon clean assembleRelease
+          test -f app/build/outputs/apk/release/app-release.apk
+          cp app/build/outputs/apk/release/app-release.apk /tmp/app-release.apk
+      - name: Retarget tag and upload APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -f v1.1.14 5a17af86f4746e9b26063d34dbba89f990225699
+          git push origin -f refs/tags/v1.1.14
+          gh release edit v1.1.14 --repo "$GITHUB_REPOSITORY" --target 5a17af86f4746e9b26063d34dbba89f990225699
+          gh release upload v1.1.14 /tmp/app-release.apk --repo "$GITHUB_REPOSITORY" --clobber
