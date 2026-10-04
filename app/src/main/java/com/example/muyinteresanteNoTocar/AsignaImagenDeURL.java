@@ -83,7 +83,7 @@ public class AsignaImagenDeURL extends AsyncTask<String,Void,Void> {
 						fos.flush();
 						fos.close();
 					} catch (Exception e) {
-						e.printStackTrace();
+						android.util.Log.e("SecurityLog", "Excepción capturada de forma segura", e);
 						try { f.delete(); } catch(Exception ex){}
 					}
 				}

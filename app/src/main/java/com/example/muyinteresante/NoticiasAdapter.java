@@ -185,7 +185,7 @@ public class NoticiasAdapter extends RecyclerView.Adapter<NoticiasAdapter.Notici
                     shareIntent.putExtra(Intent.EXTRA_TEXT, noticia.getTitulo() + "\n\n" + noticia.getEnlace());
                     context.startActivity(Intent.createChooser(shareIntent, "Compartir noticia vía"));
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    android.util.Log.e("SecurityLog", "Excepción capturada de forma segura", e);
                 }
             }
         });

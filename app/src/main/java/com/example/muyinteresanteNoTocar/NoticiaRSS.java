@@ -143,7 +143,7 @@ public class NoticiaRSS {
 			  }
 
 		  } catch (Exception e) { 
-			  e.printStackTrace();
+			  android.util.Log.e("SecurityLog", "Excepción capturada de forma segura", e);
 			  if ((urlImagen == null || urlImagen.trim().isEmpty()) && enlace != null) {
 				  urlImagen = enlace.trim();
 			  }
