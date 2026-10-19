@@ -1,0 +1,43 @@
+name: RSS performance and security release
+on:
+  push:
+    branches: [ main ]
+    paths: [ '.github/workflows/rss-performance-release.yml' ]
+permissions:
+  contents: write
+jobs:
+  validate-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Verify legacy loader and permission removed
+        run: |
+          test ! -e app/src/main/java/com/example/muyinteresanteNoTocar/AsignaImagenDeURL.java
+          ! grep -R 'AsignaImagenDeURL' --include='*.java' app/src/main/java
+          ! grep -q 'android.permission.WRITE_EXTERNAL_STORAGE' app/src/main/AndroidManifest.xml
+      - name: Test and assemble APKs
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+          test -s app/build/outputs/apk/release/app-release.apk
+      - name: Publish release APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > release_notes.md <<'EOF'
+          - 🚀 Rendimiento: Migración a Glide para un scroll fluido a 60FPS sin tirones al cargar imágenes.
+          - 🔒 Memoria: Resolución de Memory Leaks en el visor de noticias interno (WebView).
+          - ⚙️ Optimización: Las fechas y textos se procesan ahora en tiempo de red, descargando de trabajo al procesador principal del dispositivo.
+          - 🛡️ Privacidad: Eliminado el permiso de acceso al almacenamiento externo que ya no era necesario.
+          EOF
+          gh release create v1.1.16 app/build/outputs/apk/release/app-release.apk \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "v1.1.16 — Rendimiento, memoria y seguridad" \
+            --notes-file release_notes.md

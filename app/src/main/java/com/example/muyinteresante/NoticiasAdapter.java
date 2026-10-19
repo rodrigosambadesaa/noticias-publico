@@ -3,8 +3,8 @@ package com.example.muyinteresante;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.support.annotation.NonNull;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,7 +13,6 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
-import com.example.muyinteresanteNoTocar.AsignaImagenDeURL;
 import com.example.muyinteresanteNoTocar.NoticiaRSS;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -125,7 +124,7 @@ public class NoticiasAdapter extends RecyclerView.Adapter<NoticiasAdapter.Notici
         final NoticiaRSS noticia = listaFiltrada.get(position);
 
         holder.tvTitulo.setText(noticia.getTitulo());
-        holder.tvDescripcion.setText(noticia.getDescripcionSinHTML());
+        holder.tvDescripcion.setText(noticia.getDescripcionLimpia());
 
         String fechaText = noticia.getFechaComoStringFormateado();
         if (fechaText == null || fechaText.isEmpty()) {
@@ -134,15 +133,15 @@ public class NoticiasAdapter extends RecyclerView.Adapter<NoticiasAdapter.Notici
         holder.tvFecha.setText(fechaText != null ? fechaText : "");
 
         String urlImagen = noticia.getUrlImagen();
-        if (urlImagen == null || urlImagen.trim().isEmpty()) {
-            urlImagen = noticia.getEnlace();
-        }
-        holder.imgNoticia.setImageBitmap(null);
         if (urlImagen != null && !urlImagen.trim().isEmpty()) {
-            holder.imgNoticia.setTag(urlImagen);
-            new AsignaImagenDeURL(holder.imgNoticia, context).execute(urlImagen);
+            com.bumptech.glide.Glide.with(context)
+                .load(urlImagen)
+                .placeholder(android.R.drawable.ic_menu_report_image)
+                .error(android.R.drawable.ic_menu_report_image)
+                .into(holder.imgNoticia);
         } else {
-            holder.imgNoticia.setTag(null);
+            // Cancela una carga pendiente sobre una vista reciclada.
+            com.bumptech.glide.Glide.with(context).clear(holder.imgNoticia);
             holder.imgNoticia.setImageResource(android.R.drawable.ic_menu_report_image);
         }
 
@@ -189,6 +188,12 @@ public class NoticiasAdapter extends RecyclerView.Adapter<NoticiasAdapter.Notici
                 }
             }
         });
+    }
+
+    @Override
+    public void onViewRecycled(@NonNull NoticiaViewHolder holder) {
+        com.bumptech.glide.Glide.with(context).clear(holder.imgNoticia);
+        super.onViewRecycled(holder);
     }
 
     @Override

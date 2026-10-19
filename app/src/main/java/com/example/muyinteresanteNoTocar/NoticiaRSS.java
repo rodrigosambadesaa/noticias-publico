@@ -19,6 +19,8 @@ public class NoticiaRSS {
 	/* Datos del item noticia RSS */
 	private String titulo="";
 	private String descripcion="";
+	private String descripcionLimpia = "";
+	private String fechaFormateada = "";
 	private String enlace="";
 	private String strFecha="";
 	private String urlImagen="";
@@ -28,39 +30,25 @@ public class NoticiaRSS {
 	// Constantes
 	public static final String RSS_MUY_INTERESANTE="Muy interesante"; 				// Formato fecha item RSS estandard
 
-	public static final SimpleDateFormat formateadorPubDate = new SimpleDateFormat("EEE,dd MMM yyyy HH:mm:ss", Locale.US);
-	public static final SimpleDateFormat formateadorDate = new SimpleDateFormat("EEEE, dd 'de' MMMM 'del' yyyy, HH:mm", Locale.getDefault()); // Para mostrar fecha de la noticia en formato legible para el usuario
 	
 	
-	private Date convierteFechaRSSaDate() throws ParseException {
-		Date d=null;
-		ParseException e;
-		try {
-			d = formateadorPubDate.parse(strFecha); // String a Date
-			e=null;
-		}
-		catch (ParseException e1){
-			e=e1;
-			try {
-				SimpleDateFormat formateadorPubDate2 = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss", Locale.US);
-				d = formateadorPubDate2.parse(strFecha); // String a Date
-				e=null;
-			}
-			catch (ParseException e2) {
-				e=e2;
-				try {
-					SimpleDateFormat formateadorPubDate3 = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss zzz", Locale.US);
-					d = formateadorPubDate3.parse(strFecha); // String a Date
-					e=null;
-				}
-				catch(ParseException e3){
-					e=e3;
-				}
-			}
-		}
-		if (e!=null) throw e;
-		return  d;
-	}
+    private Date convierteFechaRSSaDate() throws ParseException {
+        ParseException ultimaExcepcion = null;
+        // Instancias locales: SimpleDateFormat NO es seguro entre hilos.
+        String[] formatos = {
+            "EEE,dd MMM yyyy HH:mm:ss",
+            "EEE, dd MMM yyyy HH:mm:ss",
+            "EEE, dd MMM yyyy HH:mm:ss zzz"
+        };
+        for (String formato : formatos) {
+            try {
+                return new SimpleDateFormat(formato, Locale.US).parse(strFecha);
+            } catch (ParseException e) {
+                ultimaExcepcion = e;
+            }
+        }
+        throw ultimaExcepcion != null ? ultimaExcepcion : new ParseException(strFecha, 0);
+    }
 	
 	
 	public NoticiaRSS() {}
@@ -68,9 +56,11 @@ public class NoticiaRSS {
 	public NoticiaRSS(String titulo, String descripcion, String enlace, String urlImagen, Date fecha) {
 		this.titulo = titulo != null ? titulo : "";
 		this.descripcion = descripcion != null ? descripcion : "";
+		this.descripcionLimpia = limpiarDescripcion(this.descripcion);
 		this.enlace = enlace != null ? enlace : "";
 		this.urlImagen = urlImagen != null ? urlImagen : "";
 		this.fecha = fecha;
+		this.fechaFormateada = formatearFecha(fecha);
 		if (fecha != null) {
 			Calendar c = GregorianCalendar.getInstance();
 			c.setTime(fecha);
@@ -86,6 +76,7 @@ public class NoticiaRSS {
 		strFecha=itemXML.getElementsByTagName("pubDate").item(0).getFirstChild().getNodeValue().trim();
 		
 		fecha = convierteFechaRSSaDate();
+		fechaFormateada = formatearFecha(fecha);
 		
 		if (canal.equalsIgnoreCase(RSS_MUY_INTERESANTE)){
 		  try {  
@@ -132,28 +123,22 @@ public class NoticiaRSS {
 				  }
 			  }
 
-			  // 3. Si la descripción tenía código HTML, limpiarlo
-			  if (descripcion != null && !descripcion.isEmpty()) {
-				  descripcion = Html.fromHtml(descripcion.replaceAll("<[^>]*>", "").replaceAll("\t", "")).toString().trim();
-			  }
+              // 3. La descripción se normaliza una sola vez tras extraer la imagen.
+              // Si el feed no facilita una imagen real, Glide utilizará el placeholder.
 
-			  // 4. Si urlImagen sigue vacía, asignar el enlace del artículo como fallback para og:image
-			  if ((urlImagen == null || urlImagen.trim().isEmpty()) && enlace != null && !enlace.trim().isEmpty()) {
-				  urlImagen = enlace.trim();
-			  }
-
-		  } catch (Exception e) { 
+          } catch (Exception e) { 
 			  android.util.Log.e("SecurityLog", "Excepción capturada de forma segura", e);
-			  if ((urlImagen == null || urlImagen.trim().isEmpty()) && enlace != null) {
-				  urlImagen = enlace.trim();
-			  }
 		  }
 		}
 
-	}
-	
+        descripcionLimpia = limpiarDescripcion(descripcion);
+        if (RSS_MUY_INTERESANTE.equalsIgnoreCase(canal)) {
+            // Conserva el contrato anterior para las búsquedas y la caché JSON.
+            descripcion = descripcionLimpia;
+        }
+    }
 
-	public Date getFechaNoticia() {
+    public Date getFechaNoticia() {
 		return fecha;
 	}
 
@@ -161,12 +146,17 @@ public class NoticiaRSS {
 		return strFecha;
 	}
 	
-	public void setFechaNoticia(Date fechaNoticia) {
-		fecha = fechaNoticia;
-		Calendar c =  GregorianCalendar.getInstance();
-		c.setTime(fechaNoticia);
-		strFecha = NoticiaRSS.creaStrPubDate(c);
-	}
+    public void setFechaNoticia(Date fechaNoticia) {
+        fecha = fechaNoticia;
+        fechaFormateada = formatearFecha(fechaNoticia);
+        if (fechaNoticia != null) {
+            Calendar c = GregorianCalendar.getInstance();
+            c.setTime(fechaNoticia);
+            strFecha = NoticiaRSS.creaStrPubDate(c);
+        } else {
+            strFecha = "";
+        }
+    }
 
 
 	public String getTitulo() {
@@ -182,7 +172,8 @@ public class NoticiaRSS {
 	}
 	
 	public void setDescripcion(String descripcion) {
-		this.descripcion = descripcion;
+		this.descripcion = descripcion != null ? descripcion : "";
+		this.descripcionLimpia = limpiarDescripcion(this.descripcion);
 	}
 	
 	public String getEnlace() {
@@ -204,28 +195,40 @@ public class NoticiaRSS {
 	}
 
 	/* Algunos canales RSS, introducen etiquetas HTML en la descripci�n de la noticia */
-	public String getDescripcionSinHTML() {
-		       //caracteres especiales
-		return Html.fromHtml(descripcion.replaceAll("<[^>]*>","")).toString();
-	}
+    public String getDescripcionSinHTML() {
+        return descripcionLimpia;
+    }
+
+    public String getDescripcionLimpia() {
+        return descripcionLimpia;
+    }
+
+    private static String limpiarDescripcion(String texto) {
+        if (texto == null || texto.isEmpty()) {
+            return "";
+        }
+        return Html.fromHtml(texto.replaceAll("<[^>]*>", "").replace("\t", ""))
+                .toString().trim();
+    }
+
+    private static String formatearFecha(Date fecha) {
+        if (fecha == null) {
+            return "";
+        }
+        return new SimpleDateFormat("EEEE, dd 'de' MMMM 'del' yyyy, HH:mm",
+                Locale.getDefault()).format(fecha);
+    }
 
 
-	public String getFechaComoStringFormateado() {	
-		try {
-		  // Extraemos hora, minuto y segundos de la fecha y creamos un String con el formato h:m:s, haciendo la conversion horaria a local.
-	      return formateadorDate.format(fecha); // Date a String
-		}
-		catch(Exception e){
-		  return "";
-		}
-		
-	}
+    public String getFechaComoStringFormateado() {
+        return fechaFormateada;
+    }
 	
 	public static String creaStrPubDate(Calendar fecha){
 		// A partir de la fecha recibida se crea un String en formato fecha "pubDate" RSS
 		Date d = fecha.getTime();
 
-	    return formateadorPubDate.format(d);
+	    return new SimpleDateFormat("EEE,dd MMM yyyy HH:mm:ss", Locale.US).format(d);
 	}
 	
 
