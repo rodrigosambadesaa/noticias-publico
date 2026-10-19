@@ -636,6 +636,31 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
             SearchView searchView = (SearchView) searchItem.getActionView();
             if (searchView != null) {
                 searchView.setQueryHint("Buscar noticia...");
+                searchView.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+                searchItem.setOnActionExpandListener(new MenuItem.OnActionExpandListener() {
+                    @Override public boolean onMenuItemActionExpand(MenuItem item) {
+                        searchView.post(new Runnable() {
+                            @Override public void run() {
+                                searchView.setIconified(false);
+                                searchView.requestFocus();
+                                android.view.inputmethod.InputMethodManager ime =
+                                        (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                                if (ime != null) {
+                                    View focused = searchView.findFocus();
+                                    ime.showSoftInput(focused != null ? focused : searchView,
+                                            android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+                                }
+                            }
+                        });
+                        return true;
+                    }
+                    @Override public boolean onMenuItemActionCollapse(MenuItem item) {
+                        searchView.setQuery("", false);
+                        if (adapter != null) adapter.filter("");
+                        return true;
+                    }
+                });
+                
                 searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
                     @Override
                     public boolean onQueryTextSubmit(String query) {
