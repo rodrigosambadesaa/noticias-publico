@@ -1,0 +1,44 @@
+name: Release - news search fix
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/build.gradle'
+      - '.github/workflows/news-search-release.yml'
+permissions:
+  contents: write
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Validate SearchView migration
+        run: |
+          grep -q 'androidx.appcompat.widget.SearchView' app/src/main/res/menu/main.xml
+          grep -q 'onMenuItemActionExpand' app/src/main/java/com/example/muyinteresante/MainActivity.java
+          grep -q 'showSoftInput' app/src/main/java/com/example/muyinteresante/MainActivity.java
+          ! grep -q 'android.support.v7.widget.SearchView' app/src/main/res/menu/main.xml
+      - name: Test and assemble release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleRelease
+          test -s app/build/outputs/apk/release/app-release.apk
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > release-notes.md <<'EOF'
+          - Búsqueda funcional con AndroidX SearchView: campo expandible y teclado al tocar la lupa.
+          - Filtrado en tiempo real por título y descripción.
+          - Al cerrar el buscador se restaura la lista completa.
+          - Conserva optimizaciones previas de Glide y limpieza de WebView.
+          - APK firmado con la configuración de depuración del proyecto; no es una firma de producción estable.
+          EOF
+          gh release create v1.1.17 app/build/outputs/apk/release/app-release.apk \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "v1.1.17 — Buscador AndroidX reparado" --notes-file release-notes.md
