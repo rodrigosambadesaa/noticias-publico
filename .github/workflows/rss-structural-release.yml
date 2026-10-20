@@ -1,0 +1,53 @@
+name: RSS structural refactor CI and release
+on:
+  push:
+    branches: [main, refactor/rss-architecture-publico]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  test-build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Structural checks
+        run: |
+          test -f app/src/main/java/com/example/muyinteresanteNoTocar/RssPullParser.java
+          grep -q 'XmlPullParser' app/src/main/java/com/example/muyinteresanteNoTocar/RssPullParser.java
+          ! grep -q 'DocumentBuilderFactory' app/src/main/java/com/example/muyinteresanteNoTocar/DescargaNoticiasRSS.java
+          ! grep -q 'configChanges=' app/src/main/AndroidManifest.xml
+          ! grep -q 'onConfigurationChanged' app/src/main/java/com/example/muyinteresante/MainActivity.java
+          grep -q 'ViewModelProvider' app/src/main/java/com/example/muyinteresante/MainActivity.java
+          grep -q 'Executors.newSingleThreadExecutor' app/src/main/java/com/example/muyinteresante/util/NewsCacheManager.java
+          ! grep -Eq 'NewsCacheManager\\.loadNewsFromCache\\(this\\);' app/src/main/java/com/example/muyinteresante/MainActivity.java
+      - name: Unit tests and release build
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+          test -s app/build/outputs/apk/release/app-release.apk
+      - name: Publish verified release on main
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(sed -nE 's/.*versionName "([^"]+)".*/\1/p' app/build.gradle | head -1)
+          test "$version" = "1.2.0"
+          cat > release-notes.md <<'EOF'
+          - 🚀 Rendimiento: Optimizada la memoria RAM durante la descarga mediante la lectura de flujo del XML (XmlPullParser).
+          - 🔄 Fluidez: Lectura y escritura de la caché local movidas a hilos secundarios; la app ahora arranca sin esperar al disco.
+          - 📱 UI moderna: Soporte real para rotaciones de pantalla en tablets y pantallas plegables gracias a ViewModel.
+          - 🌍 Internacionalización: Textos visibles extraídos a recursos para facilitar traducciones futuras.
+          
+          Nota de firma: el build actual utiliza signingConfigs.debug. Este APK no está firmado con una clave estable de producción y puede no ser compatible con instalaciones previas firmadas con otras claves.
+          EOF
+          gh release create "v$version" app/build/outputs/apk/release/app-release.apk \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "v$version — Caché asíncrona, XmlPullParser y ViewModel" \
+            --notes-file release-notes.md

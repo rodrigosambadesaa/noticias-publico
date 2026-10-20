@@ -4,4 +4,82 @@
     <string name="app_name">Noticias Público</string>
     <string name="actualizar">Actualizar</string>
 
+    <string name="main_text_01" formatted="false">Chequeo de red: ConnectedOrConnecting=</string>
+    <string name="main_text_02" formatted="false">, Connected=</string>
+    <string name="main_text_03" formatted="false">, Wifi=</string>
+    <string name="main_text_04" formatted="false">, Mobile=</string>
+    <string name="main_text_05" formatted="false">, VPN=</string>
+    <string name="main_text_06" formatted="false">, Airplane=</string>
+    <string name="main_text_07" formatted="false">, Fast=</string>
+    <string name="main_text_08" formatted="false">Modo Avión</string>
+    <string name="main_text_09" formatted="false">Sin red</string>
+    <string name="main_text_10" formatted="false">Modo Avión activado. Mostrando noticias guardadas en caché.</string>
+    <string name="main_text_11" formatted="false">Dispositivo sin conexión a internet. Mostrando noticias guardadas en caché.</string>
+    <string name="main_text_12" formatted="false">Portal Cautivo</string>
+    <string name="main_text_13" formatted="false">Se requiere inicio de sesión en red (Portal Cautivo detectado).</string>
+    <string name="main_text_14" formatted="false">Sin Internet</string>
+    <string name="main_text_15" formatted="false">Red activa, pero sin acceso verificado a Internet.</string>
+    <string name="main_text_16" formatted="false">Online</string>
+    <string name="main_text_17" formatted="false">Online (VPN)</string>
+    <string name="main_text_18" formatted="false">Online (Wi-Fi)</string>
+    <string name="main_text_19" formatted="false">Online (4G/5G)</string>
+    <string name="main_text_20" formatted="false">Online (Móvil Lento)</string>
+    <string name="main_text_21" formatted="false">Sin conexión disponible para iniciar la descarga.</string>
+    <string name="main_text_22" formatted="false">Sin conexión. Mostrando las noticias guardadas.</string>
+    <string name="main_text_23" formatted="false">No hay más noticias antiguas disponibles</string>
+    <string name="main_text_24" formatted="false">No se pudieron obtener nuevas noticias del canal RSS</string>
+    <string name="main_text_25" formatted="false">El feed no está disponible ahora, aunque Internet general funciona.</string>
+    <string name="main_text_26" formatted="false">Problema de conectividad. Se muestran noticias guardadas.</string>
+    <string name="main_text_27" formatted="false">No se pudo cargar </string>
+    <string name="main_text_28" formatted="false">. Se muestran noticias guardadas.</string>
+    <string name="main_text_29" formatted="false">Diagnóstico de Conectividad</string>
+    <string name="main_text_30" formatted="false">Ejecutando comprobación avanzada de red y sondeo activo DNS/HTTP...</string>
+    <string name="main_text_31" formatted="false">Cerrar</string>
+    <string name="main_text_32" formatted="false">📡 ESTADO DE INTERFAZ DE RED:\n</string>
+    <string name="main_text_33" formatted="false">• Estado general: Desconectado\n</string>
+    <string name="main_text_34" formatted="false">• Tipo de red: Ninguna\n</string>
+    <string name="main_text_35" formatted="false">• Internet Real: NO (Sin Internet)\n\n</string>
+    <string name="main_text_36" formatted="false">No hay una interfaz de red activa para ejecutar el diagnóstico.</string>
+    <string name="main_text_37" formatted="false">Ninguno</string>
+    <string name="main_text_38" formatted="false">Conectando...</string>
+    <string name="main_text_39" formatted="false">Desconectado</string>
+    <string name="main_text_40" formatted="false">Conectado a Internet</string>
+    <string name="main_text_41" formatted="false">Red activa, Internet no verificada</string>
+    <string name="main_text_42" formatted="false">• Estado general: </string>
+    <string name="main_text_43" formatted="false">• Tipo de red: </string>
+    <string name="main_text_44" formatted="false">Wi-Fi</string>
+    <string name="main_text_45" formatted="false">Móvil / Celular</string>
+    <string name="main_text_46" formatted="false">Otra / Ninguna</string>
+    <string name="main_text_47" formatted="false">• Velocidad estimada: </string>
+    <string name="main_text_48" formatted="false">Rápida (High Speed)</string>
+    <string name="main_text_49" formatted="false">Lenta / Desconocida</string>
+    <string name="main_text_50" formatted="false">• Red VPN Activa: </string>
+    <string name="main_text_51" formatted="false">SÍ</string>
+    <string name="main_text_52" formatted="false">No</string>
+    <string name="main_text_53" formatted="false">• Modo Avión: </string>
+    <string name="main_text_54" formatted="false">ACTIVADO</string>
+    <string name="main_text_55" formatted="false">Desactivado</string>
+    <string name="main_text_56" formatted="false">🔍 PRUEBA ACTIVA DNS/HTTP (GIST):\n</string>
+    <string name="main_text_57" formatted="false">• Internet Real: </string>
+    <string name="main_text_58" formatted="false">SÍ (Internet Verificado)</string>
+    <string name="main_text_59" formatted="false">NO (Sin Internet)</string>
+    <string name="main_text_60" formatted="false">• Servidor alcanzado: </string>
+    <string name="main_text_61" formatted="false">• Latencia de respuesta: </string>
+    <string name="main_text_62" formatted="false"> ms\n</string>
+    <string name="main_text_63" formatted="false">\n📋 REGISTRO DE RED (NetworkState):\n</string>
+    <string name="main_text_64" formatted="false">Buscar noticia...</string>
+    <string name="detail_text_65" formatted="false">Muy Interesante</string>
+    <string name="detail_text_66" formatted="false">Sin conexión. No se puede cargar el artículo.</string>
+    <string name="detail_text_67" formatted="false">URL no válida</string>
+    <string name="detail_text_68" formatted="false">Sin conexión. Se mantiene el artículo actual.</string>
+    <string name="detail_text_69" formatted="false">Abrir noticia en...</string>
+    <string name="detail_text_70" formatted="false">No se pudo abrir el navegador</string>
+    <string name="adapter_text_71" formatted="false">No se pudo abrir la noticia en el navegador</string>
+    <string name="adapter_text_72" formatted="false">Compartir noticia vía</string>
+    <string name="menu_search" formatted="false">Buscar noticia</string>
+    <string name="menu_browser" formatted="false">Abrir en navegador</string>
+    <string name="menu_diagnostic" formatted="false">Diagnóstico de red avanzado</string>
+    <string name="detail_label" formatted="false">Detalle de noticia</string>
+    <string name="downloading_news" formatted="false">Descargando noticias…</string>
+    <string name="downloading_news_count" formatted="false">Descargando noticias… %1$d</string>
 </resources>

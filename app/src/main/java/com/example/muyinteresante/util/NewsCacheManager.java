@@ -1,89 +1,95 @@
 package com.example.muyinteresante.util;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
+import androidx.core.util.AtomicFile;
 import com.example.muyinteresanteNoTocar.NoticiaRSS;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
-public class NewsCacheManager {
+/** Todas las operaciones de JSON y disco están serializadas en un único worker. */
+public final class NewsCacheManager {
     private static final String TAG = "NewsCacheManager";
     private static final String CACHE_FILE_NAME = "noticias_cache.json";
+    private static final ExecutorService DISK = Executors.newSingleThreadExecutor();
+    private static final Handler MAIN = new Handler(Looper.getMainLooper());
 
-    public static void saveNewsToCache(Context context, ArrayList<NoticiaRSS> list) {
-        if (context == null || list == null) return;
-        try {
-            File cacheFile = new File(context.getCacheDir(), CACHE_FILE_NAME);
-            JSONArray array = new JSONArray();
+    private NewsCacheManager() { }
 
-            for (NoticiaRSS n : list) {
-                JSONObject obj = new JSONObject();
-                obj.put("titulo", n.getTitulo() != null ? n.getTitulo() : "");
-                obj.put("descripcion", n.getDescripcion() != null ? n.getDescripcion() : "");
-                obj.put("enlace", n.getEnlace() != null ? n.getEnlace() : "");
-                obj.put("urlImagen", n.getUrlImagen() != null ? n.getUrlImagen() : "");
-                obj.put("strFecha", n.getStrFecha() != null ? n.getStrFecha() : "");
-                if (n.getFechaNoticia() != null) {
-                    obj.put("timestamp", n.getFechaNoticia().getTime());
-                } else {
-                    obj.put("timestamp", 0L);
-                }
-                array.put(obj);
-            }
-
-            FileOutputStream fos = new FileOutputStream(cacheFile);
-            OutputStreamWriter writer = new OutputStreamWriter(fos, "UTF-8");
-            writer.write(array.toString());
-            writer.close();
-            fos.close();
-            Log.d(TAG, "Noticias guardadas en caché: " + list.size());
-        } catch (Exception e) {
-            Log.e(TAG, "Error guardando noticias en caché", e);
-        }
+    public interface CacheCallback {
+        void onLoaded(ArrayList<NoticiaRSS> noticias);
     }
 
-    public static ArrayList<NoticiaRSS> loadNewsFromCache(Context context) {
-        ArrayList<NoticiaRSS> result = new ArrayList<>();
-        if (context == null) return result;
-        try {
-            File cacheFile = new File(context.getCacheDir(), CACHE_FILE_NAME);
-            if (!cacheFile.exists()) return result;
-
-            FileInputStream fis = new FileInputStream(cacheFile);
-            InputStreamReader reader = new InputStreamReader(fis, "UTF-8");
-            StringBuilder sb = new StringBuilder();
-            char[] buffer = new char[1024];
-            int read;
-            while ((read = reader.read(buffer)) != -1) {
-                sb.append(buffer, 0, read);
+    public static void saveNewsToCache(Context context, List<NoticiaRSS> list) {
+        if (context == null || list == null) return;
+        final Context app = context.getApplicationContext();
+        // Solo una instantánea de referencias; serialización y escritura en DISK.
+        final ArrayList<NoticiaRSS> snapshot = new ArrayList<>(list);
+        DISK.execute(() -> {
+            AtomicFile file = new AtomicFile(new File(app.getCacheDir(), CACHE_FILE_NAME));
+            FileOutputStream output = null;
+            try {
+                JSONArray array = new JSONArray();
+                for (NoticiaRSS n : snapshot) {
+                    if (n == null) continue;
+                    JSONObject obj = new JSONObject();
+                    obj.put("titulo", n.getTitulo() != null ? n.getTitulo() : "");
+                    obj.put("descripcion", n.getDescripcion() != null ? n.getDescripcion() : "");
+                    obj.put("enlace", n.getEnlace() != null ? n.getEnlace() : "");
+                    obj.put("urlImagen", n.getUrlImagen() != null ? n.getUrlImagen() : "");
+                    obj.put("strFecha", n.getStrFecha() != null ? n.getStrFecha() : "");
+                    Date fecha = n.getFechaNoticia();
+                    obj.put("timestamp", fecha != null ? fecha.getTime() : 0L);
+                    array.put(obj);
+                }
+                output = file.startWrite();
+                byte[] json = array.toString().getBytes("UTF-8");
+                output.write(json);
+                file.finishWrite(output);
+                output = null;
+                Log.d(TAG, "Cache guardada: " + snapshot.size());
+            } catch (Exception e) {
+                if (output != null) file.failWrite(output);
+                Log.e(TAG, "Error guardando cache", e);
             }
-            reader.close();
-            fis.close();
+        });
+    }
 
-            JSONArray array = new JSONArray(sb.toString());
-            for (int i = 0; i < array.length(); i++) {
-                JSONObject obj = array.getJSONObject(i);
-                String titulo = obj.optString("titulo", "");
-                String descripcion = obj.optString("descripcion", "");
-                String enlace = obj.optString("enlace", "");
-                String urlImagen = obj.optString("urlImagen", "");
-                long timestamp = obj.optLong("timestamp", 0L);
-
-                NoticiaRSS noticia = new NoticiaRSS(titulo, descripcion, enlace, urlImagen, timestamp > 0 ? new Date(timestamp) : null);
-                result.add(noticia);
+    public static void loadNewsFromCache(Context context, CacheCallback callback) {
+        if (context == null || callback == null) return;
+        final Context app = context.getApplicationContext();
+        DISK.execute(() -> {
+            ArrayList<NoticiaRSS> result = new ArrayList<>();
+            try {
+                AtomicFile file = new AtomicFile(new File(app.getCacheDir(), CACHE_FILE_NAME));
+                if (file.getBaseFile().exists()) {
+                    String data = new String(file.readFully(), "UTF-8");
+                    JSONArray array = new JSONArray(data);
+                    for (int i = 0; i < array.length(); i++) {
+                        JSONObject obj = array.getJSONObject(i);
+                        long timestamp = obj.optLong("timestamp", 0L);
+                        result.add(new NoticiaRSS(
+                                obj.optString("titulo", ""),
+                                obj.optString("descripcion", ""),
+                                obj.optString("enlace", ""),
+                                obj.optString("urlImagen", ""),
+                                timestamp > 0 ? new Date(timestamp) : null));
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error leyendo cache", e);
             }
-            Log.d(TAG, "Noticias cargadas desde caché: " + result.size());
-        } catch (Exception e) {
-            Log.e(TAG, "Error cargando noticias desde caché", e);
-        }
-        return result;
+            final ArrayList<NoticiaRSS> loaded = result;
+            MAIN.post(() -> callback.onLoaded(loaded));
+        });
     }
 }

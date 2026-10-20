@@ -48,7 +48,7 @@ public class DetalleActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         if (getSupportActionBar() != null) {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportActionBar().setTitle(articleTitle != null ? articleTitle : "Muy Interesante");
+            getSupportActionBar().setTitle(articleTitle != null ? articleTitle : getString(R.string.detail_text_65));
         }
 
         progressBar = findViewById(R.id.progressBarWeb);
@@ -147,9 +147,9 @@ public class DetalleActivity extends AppCompatActivity {
                 && RemoteOperationPolicy.hasUsableNetwork(this)) {
             webView.loadUrl(articleUrl);
         } else if (articleUrl != null && !articleUrl.isEmpty()) {
-            Toast.makeText(this, "Sin conexión. No se puede cargar el artículo.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, getString(R.string.detail_text_66), Toast.LENGTH_LONG).show();
         } else {
-            Toast.makeText(this, "URL no válida", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, getString(R.string.detail_text_67), Toast.LENGTH_SHORT).show();
             finish();
         }
     }
@@ -197,17 +197,17 @@ public class DetalleActivity extends AppCompatActivity {
             if (webView != null && RemoteOperationPolicy.hasUsableNetwork(this)) {
                 webView.reload();
             } else if (webView != null) {
-                Toast.makeText(this, "Sin conexión. Se mantiene el artículo actual.", Toast.LENGTH_LONG).show();
+                Toast.makeText(this, getString(R.string.detail_text_68), Toast.LENGTH_LONG).show();
             }
             return true;
         } else if (id == R.id.action_abrir_navegador || id == R.id.action_test_conectividad) {
             if (articleUrl != null && !articleUrl.isEmpty()) {
                 try {
                     Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(articleUrl));
-                    Intent chooser = Intent.createChooser(browserIntent, "Abrir noticia en...");
+                    Intent chooser = Intent.createChooser(browserIntent, getString(R.string.detail_text_69));
                     startActivity(chooser);
                 } catch (Exception e) {
-                    Toast.makeText(this, "No se pudo abrir el navegador", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, getString(R.string.detail_text_70), Toast.LENGTH_SHORT).show();
                 }
             }
             return true;

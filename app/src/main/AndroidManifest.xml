@@ -14,7 +14,6 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize"
             android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,7 +24,7 @@
         <activity
             android:name=".DetalleActivity"
             android:exported="false"
-            android:label="Detalle de Noticia"
+            android:label="@string/detail_label"
             android:parentActivityName=".MainActivity" />
 
     </application>

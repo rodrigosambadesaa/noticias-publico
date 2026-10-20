@@ -2,18 +2,18 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/action_buscar"
         android:icon="@android:drawable/ic_menu_search"
-        android:title="Buscar noticia"
+        android:title="@string/menu_search"
         app:actionViewClass="androidx.appcompat.widget.SearchView"
         app:showAsAction="collapseActionView|always" />
     <item android:id="@+id/action_abrir_navegador"
         android:icon="@android:drawable/ic_menu_compass"
-        android:title="Abrir en navegador"
+        android:title="@string/menu_browser"
         app:showAsAction="ifRoom" />
     <item android:id="@+id/menu_actualizar"
         android:icon="@android:drawable/ic_popup_sync"
         android:title="@string/actualizar"
         app:showAsAction="ifRoom" />
     <item android:id="@+id/action_test_conectividad"
-        android:title="Diagnóstico de Red Avanzado"
+        android:title="@string/menu_diagnostic"
         app:showAsAction="never" />
 </menu>

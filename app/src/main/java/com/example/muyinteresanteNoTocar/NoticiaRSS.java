@@ -1,16 +1,11 @@
 package com.example.muyinteresanteNoTocar;
 
-import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.Locale;
-import java.util.Scanner;
-import javax.xml.parsers.ParserConfigurationException;
-import org.w3c.dom.Element;
-import org.xml.sax.SAXException;
 
 import android.text.Html;
 
@@ -68,74 +63,34 @@ public class NoticiaRSS {
 		}
 	}
 
-    /* Crea una noticia a partir del itemXML y el nombre del canal */
-	public NoticiaRSS(Element itemXML, String canal) throws ParserConfigurationException, SAXException, IOException, ParseException{
-		titulo=itemXML.getElementsByTagName("title").item(0).getFirstChild().getNodeValue().trim();
-		descripcion=itemXML.getElementsByTagName("description").item(0).getFirstChild().getNodeValue().trim();
-		enlace=itemXML.getElementsByTagName("link").item(0).getFirstChild().getNodeValue().trim();
-		strFecha=itemXML.getElementsByTagName("pubDate").item(0).getFirstChild().getNodeValue().trim();
-		
-		fecha = convierteFechaRSSaDate();
-		fechaFormateada = formatearFecha(fecha);
-		
-		if (canal.equalsIgnoreCase(RSS_MUY_INTERESANTE)){
-		  try {  
-			  // 1. Intentar desde enclosure / media:content / media:thumbnail
-			  if (itemXML.getElementsByTagName("enclosure").getLength() > 0) {
-				  Element enclosure = (Element) itemXML.getElementsByTagName("enclosure").item(0);
-				  if (enclosure.hasAttribute("url")) {
-					  urlImagen = enclosure.getAttribute("url");
-				  }
-			  }
-			  if ((urlImagen == null || urlImagen.isEmpty()) && itemXML.getElementsByTagName("media:content").getLength() > 0) {
-				  Element media = (Element) itemXML.getElementsByTagName("media:content").item(0);
-				  if (media.hasAttribute("url")) {
-					  urlImagen = media.getAttribute("url");
-				  }
-			  }
-			  if ((urlImagen == null || urlImagen.isEmpty()) && itemXML.getElementsByTagName("media:thumbnail").getLength() > 0) {
-				  Element thumb = (Element) itemXML.getElementsByTagName("media:thumbnail").item(0);
-				  if (thumb.hasAttribute("url")) {
-					  urlImagen = thumb.getAttribute("url");
-				  }
-			  }
-
-			  // 2. Extraer de la descripción si contiene etiquetas de imagen
-			  if (urlImagen == null || urlImagen.isEmpty()) {
-				  Scanner s = new Scanner(descripcion);
-				  s.useDelimiter("\\s*>\\s*");
-				  String imagen = "";
-				  if (s.hasNext()) {
-					 imagen = s.next();
-				  }
-				  s.close();
-				  if (imagen.length() > 0 && (imagen.contains("http://") || imagen.contains("https://"))) {
-					  Scanner s2 = new Scanner(imagen);
-					  s2.useDelimiter("\\s*'|\"\\s*");
-					  while (s2.hasNext()) {
-						  String str = s2.next();
-						  if (str.contains("http://") || str.contains("https://")) {
-							  urlImagen = str;
-							  break;
-						  }
-					  }
-					  s2.close();
-				  }
-			  }
-
-              // 3. La descripción se normaliza una sola vez tras extraer la imagen.
-              // Si el feed no facilita una imagen real, Glide utilizará el placeholder.
-
-          } catch (Exception e) { 
-			  android.util.Log.e("SecurityLog", "Excepción capturada de forma segura", e);
-		  }
-		}
-
-        descripcionLimpia = limpiarDescripcion(descripcion);
-        if (RSS_MUY_INTERESANTE.equalsIgnoreCase(canal)) {
-            // Conserva el contrato anterior para las búsquedas y la caché JSON.
-            descripcion = descripcionLimpia;
+    /** Constructor para resultados del parser en streaming, sin dependencias DOM. */
+    public static NoticiaRSS fromRssFields(String title, String description, String link,
+                                          String rawDate, String imageUrl) {
+        Date parsed = null;
+        if (rawDate != null && !rawDate.trim().isEmpty()) {
+            String[] patterns = {
+                "EEE, dd MMM yyyy HH:mm:ss Z", "EEE, dd MMM yyyy HH:mm:ss zzz",
+                "EEE,dd MMM yyyy HH:mm:ss", "EEE, dd MMM yyyy HH:mm:ss"
+            };
+            for (String pattern : patterns) {
+                try {
+                    SimpleDateFormat fmt = new SimpleDateFormat(pattern, Locale.US);
+                    fmt.setLenient(false);
+                    parsed = fmt.parse(rawDate.trim());
+                    break;
+                } catch (ParseException ignored) { }
+            }
         }
+        String url = imageUrl != null ? imageUrl.trim() : "";
+        if (url.isEmpty() && description != null) {
+            java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
+                    "(?is)<img\\b[^>]*?\\bsrc\\s*=\\s*['\\\"]([^'\\\"]+)['\\\"]")
+                    .matcher(description);
+            if (matcher.find()) url = matcher.group(1);
+        }
+        NoticiaRSS noticia = new NoticiaRSS(title, description, link, url, parsed);
+        if (rawDate != null && !rawDate.isEmpty()) noticia.strFecha = rawDate;
+        return noticia;
     }
 
     public Date getFechaNoticia() {

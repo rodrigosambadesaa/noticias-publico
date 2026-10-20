@@ -164,10 +164,10 @@ public class NoticiasAdapter extends RecyclerView.Adapter<NoticiasAdapter.Notici
                     if (noticia != null && noticia.getEnlace() != null && !noticia.getEnlace().isEmpty()) {
                         try {
                             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(noticia.getEnlace()));
-                            Intent chooser = Intent.createChooser(intent, "Abrir noticia en...");
+                            Intent chooser = Intent.createChooser(intent, context.getString(R.string.detail_text_69));
                             context.startActivity(chooser);
                         } catch (Exception e) {
-                            Toast.makeText(context, "No se pudo abrir la noticia en el navegador", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context, context.getString(R.string.adapter_text_71), Toast.LENGTH_SHORT).show();
                         }
                     }
                 }
@@ -182,7 +182,7 @@ public class NoticiasAdapter extends RecyclerView.Adapter<NoticiasAdapter.Notici
                     shareIntent.setType("text/plain");
                     shareIntent.putExtra(Intent.EXTRA_SUBJECT, noticia.getTitulo());
                     shareIntent.putExtra(Intent.EXTRA_TEXT, noticia.getTitulo() + "\n\n" + noticia.getEnlace());
-                    context.startActivity(Intent.createChooser(shareIntent, "Compartir noticia vía"));
+                    context.startActivity(Intent.createChooser(shareIntent, context.getString(R.string.adapter_text_72)));
                 } catch (Exception e) {
                     android.util.Log.e("SecurityLog", "Excepción capturada de forma segura", e);
                 }
