@@ -537,7 +537,7 @@ public class MainActivity extends AppCompatActivity implements iNoticiaRSS {
                                     final DescargaNoticiasRSS.DownloadError error,
                                     final boolean mostrarCache) {
         if (error != null && error.isConnectivityFailure()) {
-            new ConnectivityAndInternetAccess.Builder().build().checkInternetAsync(this,
+            ConnectivityAndInternetAccess.checkHttpOnlyAsyncDefault(this,
                     new ConnectivityAndInternetAccess.InternetCallback() {
                         @Override
                         public void onResult(ConnectivityAndInternetAccess.InternetResult result) {

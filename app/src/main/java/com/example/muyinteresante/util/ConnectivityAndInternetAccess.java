@@ -360,7 +360,8 @@ public final class ConnectivityAndInternetAccess {
     private static final long EFFECTIVE_DNS_STAGE_TIMEOUT_MS = 1_500L;
     private static final long DNS_STAGE_TIMEOUT_MS = 3_500L;
     private static final long TOTAL_PROBE_TIMEOUT_MS = 6_000L;
-    private static final int MAX_PARALLEL_PROBES = 16;
+    private static final int MAX_PARALLEL_PROBES = 8;
+    private static final int MAX_CONCURRENT_DIAGNOSTICS = 2;
     private static final long ICMP_ATTEMPT_TIMEOUT_MS = 800L;
     private static final long ICMP_TOTAL_TIMEOUT_MS = 1_500L;
     private static final long ICMP_POLL_INTERVAL_MS = 25L;
@@ -439,7 +440,7 @@ public final class ConnectivityAndInternetAccess {
     private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
     private static final SSLSocketFactory TLS_12_SOCKET_FACTORY = createTls12Factory();
 
-    private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool(new ThreadFactory() {
+    private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(MAX_CONCURRENT_DIAGNOSTICS, new ThreadFactory() {
         private int number;
 
         @Override
@@ -449,6 +450,9 @@ public final class ConnectivityAndInternetAccess {
             return thread;
         }
     });
+
+    // Shared across diagnostics to avoid creating a separate probe thread pool per request.
+    private static final ExecutorService PROBE_EXECUTOR = newProbeExecutor();
 
     private final List<String> instanceHosts;
     private final List<String> instanceResolvers;
@@ -1071,6 +1075,27 @@ public final class ConnectivityAndInternetAccess {
                 globalHttpStrategy).isReachable();
     }
 
+    /**
+     * Checks application-layer HTTP(S) reachability instead of relying on DNS/TCP.
+     * Intended ONLY after ambiguous feed failures, not before normal GET requests.
+     */
+    public static Request checkHttpOnlyAsyncDefault(
+            Context context, InternetCallback callback) {
+        return executeAsync(
+                context,
+                Collections.emptyList(),
+                globalHosts,
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                globalDnsStrategy,
+                globalHttpStrategy,
+                globalTcpStrategy,
+                globalNtpStrategy,
+                globalTlsStrategy,
+                callback);
+    }
+
     public static Request checkInternetAsyncDefault(
             Context context,
             InternetCallback callback) {
@@ -1473,7 +1498,7 @@ public final class ConnectivityAndInternetAccess {
                     SystemClock.elapsedRealtime() - started);
         }
 
-        ExecutorService probeExecutor = newProbeExecutor();
+        ExecutorService probeExecutor = PROBE_EXECUTOR;
         try {
             List<String> normalizedResolvers = normalizeDnsResolvers(dnsResolvers);
             List<String> normalizedTcpTargets =
@@ -1580,7 +1605,7 @@ public final class ConnectivityAndInternetAccess {
                     attempted,
                     SystemClock.elapsedRealtime() - started);
         } finally {
-            probeExecutor.shutdownNow();
+            // Shared executor stays alive; raceProbes cancels each request's Futures.
         }
     }
 

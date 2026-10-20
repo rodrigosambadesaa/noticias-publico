@@ -38,16 +38,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(sed -nE 's/.*versionName "([^"]+)".*/\1/p' app/build.gradle | head -1)
-          test "$version" = "1.2.0"
+          test "$version" = "1.2.1"
           cat > release-notes.md <<'EOF'
-          - 🚀 Rendimiento: Optimizada la memoria RAM durante la descarga mediante la lectura de flujo del XML (XmlPullParser).
-          - 🔄 Fluidez: Lectura y escritura de la caché local movidas a hilos secundarios; la app ahora arranca sin esperar al disco.
-          - 📱 UI moderna: Soporte real para rotaciones de pantalla en tablets y pantallas plegables gracias a ViewModel.
-          - 🌍 Internacionalización: Textos visibles extraídos a recursos para facilitar traducciones futuras.
-          
-          Nota de firma: el build actual utiliza signingConfigs.debug. Este APK no está firmado con una clave estable de producción y puede no ser compatible con instalaciones previas firmadas con otras claves.
+          - 🌐 Distingue fallos del RSS y fallos generales HTTPS tras errores ambiguos, sin confundir DNS/TCP con HTTP.
+          - ⚙️ Limita a dos diagnósticos activos y utiliza un pool compartido de ocho sondas.
+          - 📡 Sin prechecks HTTP redundantes antes de descargas; conserva diagnóstico manual multicapa.
+          - 🔐 Este APK se firma con signingConfigs.debug y puede no actualizar instalaciones firmadas con otra clave.
           EOF
           gh release create "v$version" app/build/outputs/apk/release/app-release.apk \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "v$version — Caché asíncrona, XmlPullParser y ViewModel" \
+            --title "v$version — Diagnóstico HTTP y concurrencia de red" \
             --notes-file release-notes.md
