@@ -38,14 +38,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           version=$(sed -nE 's/.*versionName "([^"]+)".*/\1/p' app/build.gradle | head -1)
-          test "$version" = "1.2.1"
+          test "$version" = "1.2.2"
           cat > release-notes.md <<'EOF'
-          - 🌐 Distingue fallos del RSS y fallos generales HTTPS tras errores ambiguos, sin confundir DNS/TCP con HTTP.
-          - ⚙️ Limita a dos diagnósticos activos y utiliza un pool compartido de ocho sondas.
-          - 📡 Sin prechecks HTTP redundantes antes de descargas; conserva diagnóstico manual multicapa.
-          - 🔐 Este APK se firma con signingConfigs.debug y puede no actualizar instalaciones firmadas con otra clave.
+          - 🔤 Corrige entidades HTML visibles en titulares: &#039;, &quot;, &amp;, &aacute;, &euro; y Unicode.
+          - 📰 Normaliza títulos RSS y de la caché para presentación, búsqueda y compartición.
+          - 🧪 Pruebas JVM de entidades simples, doblemente escapadas e inválidas.
+          - 🛡️ Mantiene los datos como texto plano sin cambiar las URL.
+          - 🔐 APK firmado con signingConfigs.debug: puede no actualizar instalaciones firmadas con otra clave.
           EOF
           gh release create "v$version" app/build/outputs/apk/release/app-release.apk \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
-            --title "v$version — Diagnóstico HTTP y concurrencia de red" \
+            --title "v$version — Corrección de entidades HTML en noticias" \
             --notes-file release-notes.md

@@ -49,7 +49,7 @@ public class NoticiaRSS {
 	public NoticiaRSS() {}
 
 	public NoticiaRSS(String titulo, String descripcion, String enlace, String urlImagen, Date fecha) {
-		this.titulo = titulo != null ? titulo : "";
+		this.titulo = HtmlEntityDecoder.decode(titulo);
 		this.descripcion = descripcion != null ? descripcion : "";
 		this.descripcionLimpia = limpiarDescripcion(this.descripcion);
 		this.enlace = enlace != null ? enlace : "";
@@ -119,7 +119,7 @@ public class NoticiaRSS {
 	}
 	
 	public void setTitulo(String titulo) {
-		this.titulo = titulo;
+		this.titulo = HtmlEntityDecoder.decode(titulo);
 	}
 	
 	public String getDescripcion() {
@@ -162,8 +162,9 @@ public class NoticiaRSS {
         if (texto == null || texto.isEmpty()) {
             return "";
         }
-        return Html.fromHtml(texto.replaceAll("<[^>]*>", "").replace("\t", ""))
-                .toString().trim();
+        return HtmlEntityDecoder.decode(Html.fromHtml(
+                texto.replaceAll("<[^>]*>", "").replace("\t", ""))
+                .toString()).trim();
     }
 
     private static String formatearFecha(Date fecha) {
