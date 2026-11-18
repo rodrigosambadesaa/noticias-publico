@@ -5,6 +5,10 @@ on:
     paths: [ '.github/workflows/rss-performance-release.yml' ]
 permissions:
   contents: write
+# CVE-2026-114938: protect Java used by build/release tooling.
+env:
+  JAVA_TOOL_OPTIONS: -XX:-UseBASE64Intrinsics
+
 jobs:
   validate-and-release:
     runs-on: ubuntu-latest
