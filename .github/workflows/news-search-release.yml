@@ -7,6 +7,10 @@ on:
       - '.github/workflows/news-search-release.yml'
 permissions:
   contents: write
+# CVE-2026-114938: protect Java used by build/release tooling.
+env:
+  JAVA_TOOL_OPTIONS: -XX:-UseBASE64Intrinsics
+
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
