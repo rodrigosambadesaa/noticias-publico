@@ -5,6 +5,10 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+# CVE-2026-114938: protect Java used by build/release tooling.
+env:
+  JAVA_TOOL_OPTIONS: -XX:-UseBASE64Intrinsics
+
 jobs:
   test-build-release:
     runs-on: ubuntu-latest
