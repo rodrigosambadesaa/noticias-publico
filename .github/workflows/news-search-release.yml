@@ -43,6 +43,10 @@ jobs:
           - Conserva optimizaciones previas de Glide y limpieza de WebView.
           - APK firmado con la configuración de depuración del proyecto; no es una firma de producción estable.
           EOF
+          if gh release view v1.1.17 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v1.1.17 exists; leave published artifacts unchanged."
+            exit 0
+          fi
           gh release create v1.1.17 app/build/outputs/apk/release/app-release.apk \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "v1.1.17 — Buscador AndroidX reparado" --notes-file release-notes.md
