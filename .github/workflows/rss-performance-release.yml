@@ -41,6 +41,10 @@ jobs:
           - ⚙️ Optimización: Las fechas y textos se procesan ahora en tiempo de red, descargando de trabajo al procesador principal del dispositivo.
           - 🛡️ Privacidad: Eliminado el permiso de acceso al almacenamiento externo que ya no era necesario.
           EOF
+          if gh release view v1.1.16 --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release v1.1.16 exists; leave published artifacts unchanged."
+            exit 0
+          fi
           gh release create v1.1.16 app/build/outputs/apk/release/app-release.apk \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "v1.1.16 — Rendimiento, memoria y seguridad" \

@@ -50,6 +50,10 @@ jobs:
           - 🛡️ Mantiene los datos como texto plano sin cambiar las URL.
           - 🔐 APK firmado con signingConfigs.debug: puede no actualizar instalaciones firmadas con otra clave.
           EOF
+          if gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release "v$version" exists; leave published artifacts unchanged."
+            exit 0
+          fi
           gh release create "v$version" app/build/outputs/apk/release/app-release.apk \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "v$version — Corrección de entidades HTML en noticias" \
